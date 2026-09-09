@@ -43,6 +43,20 @@ export const usageKindValidator = v.union(
 )
 export type UsageKind = Infer<typeof usageKindValidator>
 
+// The pre-room mic check's numbers, carried into the session so thresholds
+// can be calibrated against how the room actually went. Levels are dBFS
+// after the room's own processing; no device names.
+export const micCheckValidator = v.object({
+  verdict: v.union(
+    v.literal("good"),
+    v.literal("workable"),
+    v.literal("noisy"),
+    v.literal("silent")
+  ),
+  noiseDb: v.number(),
+  voiceDb: v.number(),
+})
+
 // How a session's room ended (spec: Care Rules). Stamped at conclusion;
 // the future quota policy reads it (short/error sessions may not count).
 export const endedReasonValidator = v.union(
@@ -236,6 +250,7 @@ export default defineSchema({
     // Server-observed connect time (route start to avatar READY), so
     // production connects are measured.
     connectMs: v.optional(v.number()),
+    micCheck: v.optional(micCheckValidator),
     // Room clock anchor: stamped once at the first successful avatar connect
     // claim, never updated. All landing math derives from it (src/lib/roomClock).
     roomStartedAt: v.optional(v.number()),

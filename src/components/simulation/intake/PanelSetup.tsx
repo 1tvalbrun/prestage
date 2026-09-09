@@ -15,6 +15,8 @@ import { BTN_PRIMARY, BTN_SECONDARY } from "@/components/shared/buttons"
 import { ReceiptChip } from "@/components/shared/ReceiptChip"
 import { StageKicker } from "@/components/simulation/flow/FlowShell"
 import { IdeaNotFound } from "@/components/simulation/flow/IdeaNotFound"
+import { MicCheck } from "@/components/simulation/intake/MicCheck"
+import type { MicCheckResult } from "@/lib/micCheck"
 
 // An honest recommendation: the persona whose declared territory (tags +
 // attack line) overlaps the thing the user asked to have challenged. No
@@ -102,13 +104,22 @@ export const PanelSetup = ({ simulationId }: PanelSetupProps) => {
   // stays pinned to the recommended card either way.
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [enterFailed, setEnterFailed] = useState(false)
+  // The latest mic check on this visit, carried into the session for
+  // calibration. Advisory only: entering never depends on it.
+  const [micCheck, setMicCheck] = useState<MicCheckResult | null>(null)
 
   const handleEnterRoom = async (personaId: string) => {
     if (startingId) return
     setStartingId(personaId)
     setEnterFailed(false)
     try {
-      await createSession({ practiceId: typedId, personaId })
+      await createSession({
+        practiceId: typedId,
+        personaId,
+        ...(micCheck
+          ? { micCheck: { verdict: micCheck.verdict, noiseDb: micCheck.noiseDb, voiceDb: micCheck.voiceDb } }
+          : {}),
+      })
       router.push(`/simulation/${simulationId}/room`)
     } catch {
       setEnterFailed(true)
@@ -175,6 +186,11 @@ export const PanelSetup = ({ simulationId }: PanelSetupProps) => {
         {readLine}
         {variant.copy.panelLead}
       </p>
+
+      <MicCheck
+        panelistFirstName={panelist ? firstNameOf(panelist.name) : null}
+        onResult={setMicCheck}
+      />
 
       {panelist === null ? (
         <div className="grid grid-cols-3 items-stretch gap-4 text-left max-lg:mx-auto max-lg:max-w-[440px] max-lg:grid-cols-1">
