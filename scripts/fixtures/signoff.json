@@ -1,0 +1,1290 @@
+[
+  {
+    "lane": "sales-cold",
+    "label": "user",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "What's this about?"
+      },
+      {
+        "type": "user",
+        "text": "Never mind, sorry to bother you. Have a good one, bye."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "user",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Now's not a good time, I've got a customer here."
+      },
+      {
+        "type": "user",
+        "text": "Totally understand. I'll let you get back to it. Take care."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "user",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Just send me an email."
+      },
+      {
+        "type": "user",
+        "text": "Will do, I'll send it over this afternoon. Thanks for your time Greg, talk soon."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "user",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "We've already got somebody for that."
+      },
+      {
+        "type": "user",
+        "text": "Got it, no worries. I'll let you go. Bye now."
+      }
+    ]
+  },
+  {
+    "lane": "sales-pitch",
+    "label": "user",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Where did that thirty percent number come from?"
+      },
+      {
+        "type": "user",
+        "text": "I'll get you the source. That's all I have for today, thank you for the time, I'll follow up by email. Goodbye."
+      }
+    ]
+  },
+  {
+    "lane": "sales-pitch",
+    "label": "user",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "What are you asking me to say yes to?"
+      },
+      {
+        "type": "user",
+        "text": "A twenty minute pilot review next week. Thanks Cole, I really appreciate it, I've got to jump to another call, bye."
+      }
+    ]
+  },
+  {
+    "lane": "founder",
+    "label": "user",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Walk me through the bottoms-up market math."
+      },
+      {
+        "type": "user",
+        "text": "I think that's everything I've got. Thanks Victoria, I'll see you next time."
+      }
+    ]
+  },
+  {
+    "lane": "founder",
+    "label": "user",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Why would a customer rip out what already works?"
+      },
+      {
+        "type": "user",
+        "text": "Fair. I'm going to stop here and take that away. Thanks for the pressure, talk to you next week."
+      }
+    ]
+  },
+  {
+    "lane": "founder",
+    "label": "user",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "What's your churn?"
+      },
+      {
+        "type": "user",
+        "text": "Sorry, I have to run, something came up. Thanks so much, bye!"
+      }
+    ]
+  },
+  {
+    "lane": "interview",
+    "label": "user",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Tell me about a time a project went wrong."
+      },
+      {
+        "type": "user",
+        "text": "Thank you for your time today, I really enjoyed the conversation. I'll look forward to hearing from you. Goodbye."
+      }
+    ]
+  },
+  {
+    "lane": "interview",
+    "label": "user",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Do you have any questions for me?"
+      },
+      {
+        "type": "user",
+        "text": "No, I think you've covered everything. Thanks again, have a great rest of your day."
+      }
+    ]
+  },
+  {
+    "lane": "audit",
+    "label": "user",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Show me the control working, not the policy."
+      },
+      {
+        "type": "user",
+        "text": "I'll pull the evidence and send it over. That's all from my side, thanks, I'll sign off here."
+      }
+    ]
+  },
+  {
+    "lane": "audit",
+    "label": "user",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Who approves access changes?"
+      },
+      {
+        "type": "user",
+        "text": "Our IT lead. Okay, I need to go, I've got a meeting. Thanks, bye."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "user",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "How'd you get this number?"
+      },
+      {
+        "type": "user",
+        "text": "From your website. Look, I can hear you're busy, I'll let you go, have a good day."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "user",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Is this a sales call?"
+      },
+      {
+        "type": "user",
+        "text": "It is. And I can tell it's not the moment. Thanks anyway, take care."
+      }
+    ]
+  },
+  {
+    "lane": "founder",
+    "label": "user",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "And what does month three look like?"
+      },
+      {
+        "type": "user",
+        "text": "Retention holds at ninety. Alright, that's my pitch. Thanks everyone, signing off."
+      }
+    ]
+  },
+  {
+    "lane": "interview",
+    "label": "user",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "What would your last manager say about you?"
+      },
+      {
+        "type": "user",
+        "text": "That I'm thorough. Okay, I know we're at time, thank you, goodbye."
+      }
+    ]
+  },
+  {
+    "lane": "sales-pitch",
+    "label": "user",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Send me some info and we'll see."
+      },
+      {
+        "type": "user",
+        "text": "I'll do that today. Thanks for hearing me out, Cole. Have a good one."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "We could really help with your scheduling."
+      },
+      {
+        "type": "panelist",
+        "text": "I appreciate it, but we're going to stick with what we have. I've got to get back to it. Have a good day."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Can I get fifteen minutes next week?"
+      },
+      {
+        "type": "panelist",
+        "text": "Not right now. Send me an email and we'll see. I've got to run, take care."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Our clients see a twenty percent lift."
+      },
+      {
+        "type": "panelist",
+        "text": "Look, I've got a truck waiting. We're all set, thanks. Bye."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Just two more minutes."
+      },
+      {
+        "type": "panelist",
+        "text": "No, I'm done here. Good luck with it. Goodbye."
+      }
+    ]
+  },
+  {
+    "lane": "sales-pitch",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "So that's the pilot structure."
+      },
+      {
+        "type": "panelist",
+        "text": "Here's my read. You know my operation, and the switching cost story held. The ROI number needs a source before I'd sign. I'd take a second meeting. Thanks for coming in, we'll talk soon."
+      }
+    ]
+  },
+  {
+    "lane": "sales-pitch",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Anything else you need from me?"
+      },
+      {
+        "type": "panelist",
+        "text": "No, I've heard enough. Honest answer: I'd walk today. The integration story fell apart under questions. Go fix that and come back. Take care."
+      }
+    ]
+  },
+  {
+    "lane": "founder",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "That's the plan."
+      },
+      {
+        "type": "panelist",
+        "text": "Alright, here's where I land. The market math was strong, the pricing power argument was not. I'd want to see paying customers before a term sheet. That's my read. See you next time."
+      }
+    ]
+  },
+  {
+    "lane": "founder",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Thanks for pushing on that."
+      },
+      {
+        "type": "panelist",
+        "text": "Of course. My closing thought: you defended the wedge well and you did not defend the moat. Work on the moat. That's it from me, good luck."
+      }
+    ]
+  },
+  {
+    "lane": "interview",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "That's how I'd approach it."
+      },
+      {
+        "type": "panelist",
+        "text": "Great, that's all the time we have. Overall you were clear on outcomes and light on your own role in them. We'll be in touch. Thanks for coming in."
+      }
+    ]
+  },
+  {
+    "lane": "interview",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Any other questions?"
+      },
+      {
+        "type": "panelist",
+        "text": "No, that wraps it up for me. Thank you for your time today, we'll follow up by email. Goodbye."
+      }
+    ]
+  },
+  {
+    "lane": "audit",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Those are our access controls."
+      },
+      {
+        "type": "panelist",
+        "text": "Understood. My finding stands: the policy exists, the control does not. That concludes this session. Thank you."
+      }
+    ]
+  },
+  {
+    "lane": "audit",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "We can pull the logs."
+      },
+      {
+        "type": "panelist",
+        "text": "Do that. We're at time, so I'll close here. The written report will lay out the findings. Thanks."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "I really think you'd benefit."
+      },
+      {
+        "type": "panelist",
+        "text": "Maybe. I'm going to let you go now. Bye."
+      }
+    ]
+  },
+  {
+    "lane": "founder",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Did that answer it?"
+      },
+      {
+        "type": "panelist",
+        "text": "It did. That was my final question, and here's the read: you held up on unit economics, you didn't on distribution. Go again when you have a channel. Bye for now."
+      }
+    ]
+  },
+  {
+    "lane": "interview",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Thanks for asking that."
+      },
+      {
+        "type": "panelist",
+        "text": "We're at the end of our time. I appreciate the candor. You'll hear from the recruiter. Have a good afternoon."
+      }
+    ]
+  },
+  {
+    "lane": "sales-pitch",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Can we set up the pilot?"
+      },
+      {
+        "type": "panelist",
+        "text": "Not yet. Let me be straight: second meeting, with references in hand. Good conversation. Talk soon."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Hi, this is Dana from FleetPath, we do dispatch software."
+      },
+      {
+        "type": "panelist",
+        "text": "Not interested, thanks. Have a good one."
+      }
+    ]
+  },
+  {
+    "lane": "audit",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Is there anything else?"
+      },
+      {
+        "type": "panelist",
+        "text": "No. That completes the interview portion. I'll write it up. Goodbye."
+      }
+    ]
+  },
+  {
+    "lane": "founder",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Okay."
+      },
+      {
+        "type": "panelist",
+        "text": "So that's where I land, and I'll leave it there. Nice work today. See you in the next session."
+      }
+    ]
+  },
+  {
+    "lane": "sales-pitch",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "I understand."
+      },
+      {
+        "type": "panelist",
+        "text": "Good. We're done for today. I'll get you my notes. Take care of yourself."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "both",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "I've got to get back to it. Have a good day."
+      },
+      {
+        "type": "user",
+        "text": "Understood, you too. Bye."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "both",
+    "turns": [
+      {
+        "type": "user",
+        "text": "I'll let you go. Thanks Greg."
+      },
+      {
+        "type": "panelist",
+        "text": "Alright. Take care."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "both",
+    "turns": [
+      {
+        "type": "user",
+        "text": "I'll send that email today. Thanks for your time, bye."
+      },
+      {
+        "type": "panelist",
+        "text": "Sounds good. Bye now."
+      }
+    ]
+  },
+  {
+    "lane": "sales-pitch",
+    "label": "both",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "That's my read. Second meeting. Talk soon."
+      },
+      {
+        "type": "user",
+        "text": "Thank you Cole, I'll set it up. Have a good one."
+      }
+    ]
+  },
+  {
+    "lane": "sales-pitch",
+    "label": "both",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Thanks, I'll get you those references. Goodbye."
+      },
+      {
+        "type": "panelist",
+        "text": "Do that. Goodbye."
+      }
+    ]
+  },
+  {
+    "lane": "founder",
+    "label": "both",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "That's it from me. See you next time."
+      },
+      {
+        "type": "user",
+        "text": "Thanks Victoria, see you next time."
+      }
+    ]
+  },
+  {
+    "lane": "founder",
+    "label": "both",
+    "turns": [
+      {
+        "type": "user",
+        "text": "That's everything I've got, thanks, bye."
+      },
+      {
+        "type": "panelist",
+        "text": "Good work today. Bye."
+      }
+    ]
+  },
+  {
+    "lane": "interview",
+    "label": "both",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "We'll be in touch. Thanks for coming in."
+      },
+      {
+        "type": "user",
+        "text": "Thank you, I appreciate it. Goodbye."
+      }
+    ]
+  },
+  {
+    "lane": "interview",
+    "label": "both",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Thanks for your time today. Goodbye."
+      },
+      {
+        "type": "panelist",
+        "text": "Thank you. Take care."
+      }
+    ]
+  },
+  {
+    "lane": "audit",
+    "label": "both",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "That concludes the session. Thank you."
+      },
+      {
+        "type": "user",
+        "text": "Thanks, I'll send the evidence over. Bye."
+      }
+    ]
+  },
+  {
+    "lane": "audit",
+    "label": "both",
+    "turns": [
+      {
+        "type": "user",
+        "text": "I need to go, thanks."
+      },
+      {
+        "type": "panelist",
+        "text": "Understood. Goodbye."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "both",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Not interested. Have a good one."
+      },
+      {
+        "type": "user",
+        "text": "Okay, you too, take care."
+      }
+    ]
+  },
+  {
+    "lane": "founder",
+    "label": "both",
+    "turns": [
+      {
+        "type": "user",
+        "text": "I'll take that away. Thanks, talk next week."
+      },
+      {
+        "type": "panelist",
+        "text": "Talk next week. Bye."
+      }
+    ]
+  },
+  {
+    "lane": "interview",
+    "label": "both",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "That wraps it up. Have a good afternoon."
+      },
+      {
+        "type": "user",
+        "text": "You too, thanks again."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "none",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Yeah, this is Greg."
+      },
+      {
+        "type": "user",
+        "text": "Hey Greg, how are you doing today?"
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Good morning, this is Dana from FleetPath."
+      },
+      {
+        "type": "panelist",
+        "text": "What's this about?"
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Last week a customer said bye and hung up on me before I got a word in, so I'll be quick."
+      },
+      {
+        "type": "panelist",
+        "text": "Go on then."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "none",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "How much is it?"
+      },
+      {
+        "type": "user",
+        "text": "It starts at two hundred a month per truck. Can I ask how you dispatch today?"
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "none",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "We've got somebody for that."
+      },
+      {
+        "type": "user",
+        "text": "Makes sense. Who are you using, if you don't mind me asking?"
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Thanks for picking up. I know you're busy so I'll get to it."
+      },
+      {
+        "type": "panelist",
+        "text": "Thirty seconds."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "none",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Just send me an email."
+      },
+      {
+        "type": "user",
+        "text": "Happy to. Before I do, is scheduling something you'd even change this year?"
+      }
+    ]
+  },
+  {
+    "lane": "sales-pitch",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Thank you for making the time. Let me start with the problem."
+      },
+      {
+        "type": "panelist",
+        "text": "Go ahead."
+      }
+    ]
+  },
+  {
+    "lane": "sales-pitch",
+    "label": "none",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "I've sat through a hundred vendor pitches. Show me the one thing that makes yours worth a next step."
+      },
+      {
+        "type": "user",
+        "text": "Month three: your ops team stops double-booking."
+      }
+    ]
+  },
+  {
+    "lane": "sales-pitch",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Our last customer said goodbye to their spreadsheet in a week."
+      },
+      {
+        "type": "panelist",
+        "text": "What did the week actually look like?"
+      }
+    ]
+  },
+  {
+    "lane": "sales-pitch",
+    "label": "none",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "One more question before we wrap up. Where does the ROI number come from?"
+      },
+      {
+        "type": "user",
+        "text": "From the pilot at Harbor Fitness. Twelve sites, six months."
+      }
+    ]
+  },
+  {
+    "lane": "sales-pitch",
+    "label": "none",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Let me announce my final question. What's the switching cost for my team?"
+      },
+      {
+        "type": "user",
+        "text": "Two weeks of parallel running, then cutover."
+      }
+    ]
+  },
+  {
+    "lane": "founder",
+    "label": "none",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Walk me through the market math, bottoms-up."
+      },
+      {
+        "type": "user",
+        "text": "Forty thousand gyms in the US, eight thousand in our segment."
+      }
+    ]
+  },
+  {
+    "lane": "founder",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Thanks, that's a good question. So the moat is the scheduling data."
+      },
+      {
+        "type": "panelist",
+        "text": "Data anyone could collect. Why is yours defensible?"
+      }
+    ]
+  },
+  {
+    "lane": "founder",
+    "label": "none",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "I'm going to ask one last question, then give you my read. What's your burn?"
+      },
+      {
+        "type": "user",
+        "text": "Sixty a month, eighteen months of runway."
+      }
+    ]
+  },
+  {
+    "lane": "founder",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "When we say goodbye to a customer, we run an exit interview. Churn is under five percent."
+      },
+      {
+        "type": "panelist",
+        "text": "Under five percent on what base?"
+      }
+    ]
+  },
+  {
+    "lane": "founder",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Good afternoon everyone, thanks for having me."
+      },
+      {
+        "type": "panelist",
+        "text": "Let's get into it. What are you building?"
+      }
+    ]
+  },
+  {
+    "lane": "interview",
+    "label": "none",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Tell me about a time this went wrong."
+      },
+      {
+        "type": "user",
+        "text": "Sure. Last year we shipped a migration that took the site down for an hour."
+      }
+    ]
+  },
+  {
+    "lane": "interview",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Thank you for that context. Can I ask about the team structure?"
+      },
+      {
+        "type": "panelist",
+        "text": "Six engineers, two designers, one PM."
+      }
+    ]
+  },
+  {
+    "lane": "interview",
+    "label": "none",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Before we finish, I have a couple more questions. How do you handle disagreement?"
+      },
+      {
+        "type": "user",
+        "text": "I try to get the disagreement written down first."
+      }
+    ]
+  },
+  {
+    "lane": "interview",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "My last manager and I said our goodbyes on great terms. She's a reference."
+      },
+      {
+        "type": "panelist",
+        "text": "What would she say your weakness is?"
+      }
+    ]
+  },
+  {
+    "lane": "interview",
+    "label": "none",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Good morning. Thanks for joining. Let's start with your background."
+      },
+      {
+        "type": "user",
+        "text": "I've been in platform engineering for six years."
+      }
+    ]
+  },
+  {
+    "lane": "audit",
+    "label": "none",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Show me the control working, not the policy."
+      },
+      {
+        "type": "user",
+        "text": "Here's the access review from March. Every row is signed."
+      }
+    ]
+  },
+  {
+    "lane": "audit",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Thanks for flagging that. We'll add the evidence."
+      },
+      {
+        "type": "panelist",
+        "text": "When was the last time the control actually ran?"
+      }
+    ]
+  },
+  {
+    "lane": "audit",
+    "label": "none",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "We'll close on this area shortly. First, who owns the vendor list?"
+      },
+      {
+        "type": "user",
+        "text": "Procurement, reviewed quarterly."
+      }
+    ]
+  },
+  {
+    "lane": "audit",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "I have to say goodbye to the old process anyway, it's being replaced."
+      },
+      {
+        "type": "panelist",
+        "text": "Replaced by what, and when?"
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "none",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Is this a sales call?"
+      },
+      {
+        "type": "user",
+        "text": "It is. Fair question. Do you handle the scheduling yourself or does someone in the office?"
+      }
+    ]
+  },
+  {
+    "lane": "founder",
+    "label": "none",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Okay, and what would I see at month three?"
+      },
+      {
+        "type": "user",
+        "text": "Three paying gyms, one of them a chain. Then we go again on the next segment."
+      }
+    ]
+  },
+  {
+    "lane": "sales-pitch",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "I appreciate you taking this seriously."
+      },
+      {
+        "type": "panelist",
+        "text": "I take every pitch seriously. Where are the references?"
+      }
+    ]
+  },
+  {
+    "lane": "interview",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Thanks. That's a great question, give me a second to think."
+      },
+      {
+        "type": "panelist",
+        "text": "Take your time."
+      }
+    ]
+  },
+  {
+    "lane": "audit",
+    "label": "none",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "Thank you. Now, the backup restore test."
+      },
+      {
+        "type": "user",
+        "text": "Last run in January, successful, documented in the runbook."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Hi, is this Greg? This is Dana calling from FleetPath, we work with HVAC companies like yours on dispatch."
+      },
+      {
+        "type": "panelist",
+        "text": "Uh huh. And?"
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Who deals with a double booking, you or the technology?"
+      },
+      {
+        "type": "panelist",
+        "text": "Our team handles it. I need to get back to work, anything else?"
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "That was all. Goodbye."
+      },
+      {
+        "type": "panelist",
+        "text": "Goodbye? Did you want to send something to my email?"
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Can I get fifteen minutes Thursday?"
+      },
+      {
+        "type": "panelist",
+        "text": "I've got a truck waiting. Last thing, what is it you actually do?"
+      }
+    ]
+  },
+  {
+    "lane": "sales-pitch",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "So that's the offer."
+      },
+      {
+        "type": "panelist",
+        "text": "I have to wrap up soon. Is there anything you want me to hear before I give you my read?"
+      }
+    ]
+  },
+  {
+    "lane": "founder",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "That's the plan."
+      },
+      {
+        "type": "panelist",
+        "text": "We're nearly out of time. One last question, then my read: what's the churn?"
+      }
+    ]
+  },
+  {
+    "lane": "interview",
+    "label": "none",
+    "turns": [
+      {
+        "type": "user",
+        "text": "I think that covers it."
+      },
+      {
+        "type": "panelist",
+        "text": "We have a couple of minutes left. Anything you'd like to add before we close?"
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "panelist",
+    "turns": [
+      {
+        "type": "user",
+        "text": "Who deals with a double booking, you or the technology?"
+      },
+      {
+        "type": "panelist",
+        "text": "Our team handles it if anything comes up, but like I said, we haven't had problems. I need to get back to something. Take care."
+      }
+    ]
+  },
+  {
+    "lane": "sales-cold",
+    "label": "none",
+    "turns": [
+      {
+        "type": "panelist",
+        "text": "I need to get back to work, anything else?"
+      },
+      {
+        "type": "user",
+        "text": "Just one thing. Can I get fifteen minutes Thursday at 8 to show you the reassignment on your own job list?"
+      }
+    ]
+  }
+]

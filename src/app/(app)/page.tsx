@@ -43,9 +43,12 @@ const ResumeHero = ({ practice }: { practice: PracticeRow }) => {
     )
   }
 
+  const openItems = practice.openItems === 1 ? "one item" : `${practice.openItems} items`
   const waitingLine =
     practice.openItems > 0 && persona
-      ? `${firstNameOf(persona.name)} is waiting on ${practice.openItems === 1 ? "one item" : `${practice.openItems} items`} you said you'd bring.`
+      ? practice.remembers
+        ? `${firstNameOf(persona.name)} is waiting on ${openItems} you said you'd bring.`
+        : `You have ${openItems} on your list from last time.`
       : practice.hasLive
         ? "A session is still live. Step back in."
         : "Pick up where you left off."

@@ -8,6 +8,8 @@ import { useQuery } from "convex/react"
 import { api } from "@convex/_generated/api"
 import { Id } from "@convex/_generated/dataModel"
 import { getPack } from "@/domains/registry"
+import type { Scope } from "@/domains/types"
+import { flowSteps, type FlowStage } from "@/lib/flowSteps"
 import { cn } from "@/lib/utils"
 import { LogoMark } from "@/components/shared/LogoMark"
 import { BrandName } from "@/components/shared/BrandName"
@@ -24,7 +26,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
-export type FlowStage = "brief" | "read" | "audit" | "panel" | "room"
+export type { FlowStage }
 
 const STAGE_ROUTES: Record<FlowStage, (simulationId: string) => string> = {
   brief: () => "/simulation/new",
@@ -47,6 +49,9 @@ type FlowShellProps = {
   // Names the lane before a practice exists — the brief stage's wizard
   // knows the lane, the later stages resolve it from the practice.
   packId?: string
+  // The brief stage's in-progress scope, which shapes the rail before a
+  // practice exists; later stages read the practice's.
+  scope?: Scope
   fullBleed?: boolean
   // The room renders the whole shell on the dark surface.
   dark?: boolean
@@ -65,6 +70,7 @@ export const FlowShell = ({
   stage,
   simulationId,
   packId,
+  scope,
   fullBleed,
   dark,
   confirmExit,
@@ -74,21 +80,16 @@ export const FlowShell = ({
 }: FlowShellProps) => {
   const router = useRouter()
   const mainRef = useRef<HTMLElement>(null)
-  // The middle beat's name comes from the lane ("Pre-read" for audit lanes,
-  // the blueprint label for the interview lane). Resolved from the packId
-  // prop when the caller knows it, else from the practice; the default
+  // The rail's shape comes from the lane and the practice's scope (the
+  // middle beat's name, or its absence). Resolved from the packId and scope
+  // props when the caller knows them, else from the practice; the default
   // covers the frame before either loads.
   const practice = useQuery(
     api.practices.get,
     packId || !simulationId ? "skip" : { id: simulationId as Id<"practices"> }
   )
   const pack = packId ? getPack(packId) : practice ? getPack(practice.packId) : null
-  const displaySteps: { label: string; keys: FlowStage[] }[] = [
-    { label: "Brief", keys: ["brief"] },
-    { label: pack?.prep.stepLabel ?? "Pre-read", keys: ["read", "audit"] },
-    { label: "Panel", keys: ["panel"] },
-    { label: "Room", keys: ["room"] },
-  ]
+  const displaySteps = flowSteps(pack, scope ?? practice?.scope ?? {})
   const currentIndex = displaySteps.findIndex((step) => step.keys.includes(stage))
 
   useEffect(() => {

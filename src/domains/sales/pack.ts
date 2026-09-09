@@ -1,8 +1,18 @@
 import { BUYER_PERSONAS } from "./personas.ts"
 import type { DomainPack } from "../types.ts"
-import { OBJECTIONS } from "./objections.ts"
 import { buildRoomBriefing, turnTaking } from "./briefing.ts"
 import { analyzeSystem, analyzeUser, audit, debrief, extractScope, orchestrate } from "./prompts.ts"
+import {
+  CALL_TYPE_KEY,
+  COLD_VERDICTS,
+  PITCH_INTAKE_FIELDS,
+  PITCH_VERDICTS,
+  pitchFormSections,
+  pitchPanelLead,
+  pitchPreview,
+  salesNextStep,
+  salesVariant,
+} from "./variant.ts"
 
 export const salesPack: DomainPack = {
   id: "sales",
@@ -10,58 +20,12 @@ export const salesPack: DomainPack = {
   shortLabel: "Sales",
   startCta: "Start a sales practice",
   description:
-    "Face the buyer before the real one. Your offer gets read, audited, and pushed on live by a skeptical operator, then debriefed on whether the deal moved.",
+    "Face the buyer before the real one. Cold-call a stranger who never asked to hear from you, or pitch the operator who read your materials, then get debriefed on whether the deal moved.",
   subjectField: "offering",
   subtitleFields: ["prospect", "ask"],
   userLabel: "SELLER",
   userTitle: "Seller",
-  scopeFields: [
-    {
-      key: "offering",
-      label: "What you're selling",
-      kind: "text",
-      required: true,
-      maxLength: 60,
-      placeholder: "e.g. CourtFlow scheduling",
-    },
-    {
-      key: "description",
-      label: "What it does",
-      kind: "textarea",
-      required: true,
-      maxLength: 600,
-      placeholder: "What it does and the problem it removes, in a couple of lines",
-    },
-    {
-      key: "prospect",
-      label: "Who you're pitching",
-      kind: "text",
-      required: true,
-      maxLength: 80,
-      placeholder: "e.g. Facilities manager at a mid-size gym",
-    },
-    {
-      key: "ask",
-      label: "What you're asking them to say yes to",
-      kind: "chips",
-      options: [
-        { value: "discovery", label: "A discovery call" },
-        { value: "pilot", label: "A pilot" },
-        { value: "paid-pilot", label: "A paid pilot" },
-        { value: "partnership", label: "A partnership" },
-        { value: "contract", label: "A signed contract" },
-      ],
-    },
-    {
-      key: "objections",
-      label: "Objections you expect",
-      kind: "multi",
-      options: OBJECTIONS.map((objection) => ({
-        value: objection.label,
-        label: objection.label,
-      })),
-    },
-  ],
+  scopeFields: PITCH_INTAKE_FIELDS,
   contextFields: [
     { key: "coreOffer", label: "Core offer" },
     { key: "buyerProfile", label: "Buyer profile" },
@@ -72,13 +36,13 @@ export const salesPack: DomainPack = {
     { key: "openQuestions", label: "Open questions" },
   ],
   verdicts: {
-    options: [
-      { value: "buy", label: "Would buy", tone: "good" },
-      { value: "second-meeting", label: "Second meeting", tone: "mid" },
-      { value: "walk", label: "Would walk", tone: "bad" },
-    ],
-    fallback: "second-meeting",
+    options: [...PITCH_VERDICTS.options, ...COLD_VERDICTS.options],
+    fallback: PITCH_VERDICTS.fallback,
   },
+  sessionMetaField: CALL_TYPE_KEY,
+  variantField: CALL_TYPE_KEY,
+  variant: salesVariant,
+  nextStep: salesNextStep,
   prep: {
     kind: "audit",
     stepLabel: "Pre-read",
@@ -125,28 +89,12 @@ export const salesPack: DomainPack = {
       sub: "Talk through what you're selling, who's across the table, and what you're asking them to say yes to. It gets shaped into a brief you'll confirm.",
     },
     form: {
-      sections: [
-        { title: "The deal", keys: ["offering", "description", "prospect"] },
-        { title: "The ask", keys: ["ask", "objections"] },
-      ],
+      sections: pitchFormSections,
       materialsTitle: "Materials",
       materialsMeta: "optional · PDF PPTX XLSX DOCX",
       materialsPrompt: "Add your documents.",
     },
-    preview: {
-      title: "What Cole will read",
-      rows: [
-        { key: "offering", label: "Selling", hint: "Not yet named" },
-        {
-          key: "description",
-          label: "What it does",
-          hint: "The problem it removes, in Cole's terms",
-        },
-        { key: "prospect", label: "Across the table", hint: "Who Cole is playing" },
-      ],
-      chips: { label: "Ask and objections", keys: ["ask", "objections"] },
-      footer: "Only what you put here makes it in; gaps become questions, not guesses.",
-    },
+    preview: pitchPreview,
     readWait: {
       kicker: "Reading your pitch",
       heading: () => "Going through what you gave us.",
@@ -176,7 +124,7 @@ export const salesPack: DomainPack = {
     panel: {
       kicker: "Meet your buyer",
       heading: "Who's across the table?",
-      lead: "The buyer reads your scope and materials before the room opens. Expect the objections you named, and a few you didn't.",
+      lead: pitchPanelLead,
     },
     promptHelpers: [
       "The problem this removes is…",

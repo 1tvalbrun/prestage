@@ -1,6 +1,7 @@
 "use client"
 
-import { FileText, X } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Check, Copy, FileText, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
   Dialog,
@@ -16,6 +17,45 @@ type TranscriptEntry = {
   type: "user" | "panelist"
   speakerName: string
   text: string
+}
+
+// Plain text, one turn per paragraph, for pasting anywhere: another
+// model, a doc, a message.
+const transcriptText = (transcript: TranscriptEntry[]): string =>
+  transcript.map((entry) => `${entry.speakerName}: ${entry.text}`).join("\n\n")
+
+const COPIED_MS = 2_000
+
+const CopyTranscriptButton = ({ transcript }: { transcript: TranscriptEntry[] }) => {
+  const [state, setState] = useState<"idle" | "copied" | "failed">("idle")
+
+  // The confirmation is a moment, not a mode: the timer is the external
+  // system that returns the button to its resting label.
+  useEffect(() => {
+    if (state === "idle") return
+    const timer = setTimeout(() => setState("idle"), COPIED_MS)
+    return () => clearTimeout(timer)
+  }, [state])
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(transcriptText(transcript))
+      setState("copied")
+    } catch {
+      setState("failed")
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      className="focus-ring flex items-center gap-1.5 rounded-lg border border-line-2 px-2.5 py-1.5 text-[12.5px] text-on-surface-3 transition-colors hover:bg-surface-2 hover:text-on-surface max-md:py-2.5"
+    >
+      {state === "copied" ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+      {state === "copied" ? "Copied" : state === "failed" ? "Couldn't copy" : "Copy"}
+    </button>
+  )
 }
 
 // Its own component so the scrollbar hook's mount effect runs when the
@@ -75,12 +115,15 @@ export const TranscriptDialog = ({
               Session with {personaName} · {turnCount}
             </DialogDescription>
           </div>
-          <DialogClose
-            aria-label="Close"
-            className="focus-ring -mr-2 -mt-1 grid place-items-center rounded-lg p-1.5 text-on-surface-3 transition-colors hover:bg-surface-2 hover:text-on-surface max-md:p-3"
-          >
-            <X className="size-[15px]" />
-          </DialogClose>
+          <div className="flex items-center gap-2">
+            <CopyTranscriptButton transcript={transcript} />
+            <DialogClose
+              aria-label="Close"
+              className="focus-ring -mr-2 grid place-items-center rounded-lg p-1.5 text-on-surface-3 transition-colors hover:bg-surface-2 hover:text-on-surface max-md:p-3"
+            >
+              <X className="size-[15px]" />
+            </DialogClose>
+          </div>
         </div>
         <TranscriptTurns transcript={transcript} />
       </DialogContent>

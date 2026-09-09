@@ -3,13 +3,13 @@
 import { use, useEffect, useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ArrowLeft, Check, FileDown, Video } from "lucide-react"
+import { ArrowLeft, ArrowRight, Check, FileDown, Video } from "lucide-react"
 import { useAction, useMutation, useQuery } from "convex/react"
 import { api } from "@convex/_generated/api"
 import type { Id } from "@convex/_generated/dataModel"
 import { cn } from "@/lib/utils"
 import { clearRoomLanding, peekRoomLanding } from "@/lib/roomLanding"
-import { verdictDirection } from "@/domains/registry"
+import { getPack, variantOf, verdictDirection } from "@/domains/registry"
 import { bySpokenTime } from "@/lib/transcript"
 import { BTN_PRIMARY, BTN_SECONDARY } from "@/components/shared/buttons"
 import { PersonaAvatar } from "@/components/shared/PersonaAvatar"
@@ -127,6 +127,9 @@ const SessionPage = ({
   }
 
   const debrief = session.debrief ?? null
+  const pack = getPack(practice.packId)
+  const variant = variantOf(pack, practice.scope)
+  const nextStep = debrief ? (pack.nextStep?.(practice.scope, debrief.verdict) ?? null) : null
   // The tier movement against the previous debriefed session, spoken as
   // direction only — no numbers anywhere.
   const previousVerdict =
@@ -288,7 +291,9 @@ const SessionPage = ({
                     })}
                     <div className="flex items-center gap-2 border-t border-line bg-surface px-4 py-[11px] text-[12.5px] text-on-surface-3">
                       <Check className="size-3.5" />
-                      {firstNameOf(session.persona.name)} follows up on these next session.
+                      {variant.remembers
+                    ? `${firstNameOf(session.persona.name)} follows up on these next session.`
+                    : "Bring these into your next session."}
                     </div>
                   </div>
                 </section>
@@ -306,6 +311,15 @@ const SessionPage = ({
                   <Video className="size-[14px]" />
                   Go again
                 </button>
+                {nextStep && (
+                  <Link
+                    href={`/simulation/new?from=${practiceId}&next=1`}
+                    className={BTN_SECONDARY}
+                  >
+                    {nextStep.label}
+                    <ArrowRight className="size-[14px]" />
+                  </Link>
+                )}
               </div>
             </div>
 

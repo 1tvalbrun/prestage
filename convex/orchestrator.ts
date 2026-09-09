@@ -2,7 +2,6 @@ import { v } from "convex/values"
 import { action } from "./_generated/server"
 import { api, internal } from "./_generated/api"
 import { bySpokenTime } from "../src/lib/transcript"
-import { CLOSE_CHECK_PROMPT, closeCheckWindow } from "../src/lib/ending"
 import { createOpenAI, modelSettings } from "../src/lib/openai"
 import { getPack } from "../src/domains/registry"
 import type { NoteType } from "./schema"
@@ -63,39 +62,26 @@ export const decide = action({
     const openai = await createOpenAI()
     const settings = modelSettings("fast")
 
-    const [response, closeCheck] = await Promise.all([
-      openai.chat.completions.create({
-        ...settings,
-        messages: [
-          {
-            role: "system",
-            content: pack.prompts.orchestrate({
-              characterName: persona.name,
-              characterRole: persona.role,
-              characterTone: persona.tone,
-              scope: practice.scope,
-              themes: practice.blueprint?.themes.map((theme) => theme.title) ?? null,
-            }),
-          },
-          { role: "user", content: `Recent conversation:\n${recent}` },
-        ],
-        response_format: { type: "json_object" },
-      }),
-      // The close check is its own single-task call — as a rider on the
-      // note prompt it missed real closes (src/lib/ending.ts). First true
-      // stamps closeDeliveredAt and the room lands on it, so once stamped
-      // the check stops running.
-      session.closeDeliveredAt === undefined
-        ? openai.chat.completions.create({
-            ...settings,
-            messages: [
-              { role: "system", content: CLOSE_CHECK_PROMPT },
-              { role: "user", content: closeCheckWindow(spokenOrder) },
-            ],
-            response_format: { type: "json_object" },
-          })
-        : null,
-    ])
+    // Sign-off detection is its own call (sessions.checkSignOff), fired by
+    // the bridges alongside this one: as a rider on the note prompt it
+    // missed real closes.
+    const response = await openai.chat.completions.create({
+      ...settings,
+      messages: [
+        {
+          role: "system",
+          content: pack.prompts.orchestrate({
+            characterName: persona.name,
+            characterRole: persona.role,
+            characterTone: persona.tone,
+            scope: practice.scope,
+            themes: practice.blueprint?.themes.map((theme) => theme.title) ?? null,
+          }),
+        },
+        { role: "user", content: `Recent conversation:\n${recent}` },
+      ],
+      response_format: { type: "json_object" },
+    })
 
     await recordUsage(ctx, {
       userId: session.userId,
@@ -106,26 +92,6 @@ export const decide = action({
       inputTokens: response.usage?.prompt_tokens,
       outputTokens: response.usage?.completion_tokens,
     })
-
-    if (closeCheck) {
-      await recordUsage(ctx, {
-        userId: session.userId,
-        kind: "close_check",
-        practiceId: session.practiceId,
-        sessionId: args.sessionId,
-        model: settings.model,
-        inputTokens: closeCheck.usage?.prompt_tokens,
-        outputTokens: closeCheck.usage?.completion_tokens,
-      })
-      try {
-        const verdict = JSON.parse(closeCheck.choices[0]?.message?.content ?? "")
-        if (verdict.sessionEnded === true) {
-          await ctx.runMutation(internal.sessions.markCloseDelivered, { id: args.sessionId })
-        }
-      } catch {
-        // Malformed check output detects nothing; the next turn re-runs it.
-      }
-    }
 
     const content = response.choices[0]?.message?.content
     if (!content) return null

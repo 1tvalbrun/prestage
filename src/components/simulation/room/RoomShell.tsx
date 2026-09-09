@@ -20,15 +20,19 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { firstNameOf, initialsOf } from "@/domains/types"
-import { getPack } from "@/domains/registry"
+import { getPack, variantOf } from "@/domains/registry"
+import { minutesPhrase } from "@/lib/ending"
 import { idleState } from "@/lib/idleRule"
 import {
+  COLD_CALL_CUE,
+  coldTimeUp,
   pickInvitation,
   roomTimePhase,
   shouldInvite,
-  shouldLandAfterClose,
+  shouldLandOnTime,
   ROOM_MS,
 } from "@/lib/roomClock"
+import { USER_SPEECH_GAP_MS, landAfterRibbon, signOffPhase } from "@/lib/signOff"
 import { markRoomLanding } from "@/lib/roomLanding"
 import { isSessionStale, lastActivityAt } from "@/lib/session"
 import { useNow } from "@/lib/useNow"
@@ -108,12 +112,10 @@ const TERMINAL_CONNECT_CODES: ReadonlySet<string> = new Set([
   "complete",
 ] satisfies ConnectCode[])
 
-// Elapsed for THIS sitting, anchored at mount — a resumed room is far older
-// than the session being recorded (anchoring at session creation once read
-// "22560:17"). A mid-session refresh restarts the readout; the transcript
-// keeps the true times.
-const SessionClock = () => {
-  const [startedAt] = useState(() => Date.now())
+// Elapsed on the room clock, anchored where the server anchors it (the
+// avatar's arrival), so the readout never runs through the connect wait.
+// A room past its budget cannot be resumed, so the anchor is never stale.
+const SessionClock = ({ startedAt }: { startedAt: number }) => {
   const [now, setNow] = useState(() => Date.now())
 
   useEffect(() => {
@@ -160,6 +162,7 @@ const RoomShellBody = ({
   const router = useRouter()
   const generateDebrief = useAction(api.sessions.generateDebrief)
   const endSession = useMutation(api.sessions.end)
+  const dismissSignOff = useMutation(api.sessions.dismissSignOff)
 
   const toggleMicRef = useRef<(() => void) | null>(null)
   // The Runway session this attempt minted, held only while it has yet to
@@ -177,6 +180,18 @@ const RoomShellBody = ({
   // included, long before a final commits. Feeds the idle rule only; a ref
   // because it changes on every spoken word and must not cause renders.
   const lastHeardAtRef = useRef<number | null>(null)
+  // Start of the latest avatar speech: the sign-off rules need to know
+  // whether a reply began after the goodbye. LiveKit's speaking event fires
+  // on transitions only, so every true is a start.
+  const avatarSpokeAtRef = useRef<number | null>(null)
+  // The ribbon's start; null while no drop is underway. "Keep going" clears it.
+  const [ribbonAt, setRibbonAt] = useState<number | null>(null)
+  // A cold call past its budget: when the floor was handed to the persona
+  // for the last word (the user's mic goes off at that moment).
+  const [lastWordAt, setLastWordAt] = useState<number | null>(null)
+  // React re-runs the mount in development (strict mode), which aborts the
+  // first connect; an abort after real unmount is the room cancelling itself.
+  const mountedRef = useRef(false)
   const [isMicEnabled, setIsMicEnabled] = useState(true)
   const [micError, setMicError] = useState<Error | null>(null)
   const [transcriptionFailed, setTranscriptionFailed] = useState(false)
@@ -218,6 +233,11 @@ const RoomShellBody = ({
   const mountedAt = useNow()
 
   const handleToggleMic = useCallback(() => toggleMicRef.current?.(), [])
+  // The hand-off mutes explicitly; the bridge only exposes a toggle, so it
+  // is called only while the mic is live.
+  const muteMic = useCallback(() => {
+    if (isMicEnabled) toggleMicRef.current?.()
+  }, [isMicEnabled])
 
   const handleTranscriptionFailedChange = useCallback(
     (failed: boolean) => setTranscriptionFailed(failed),
@@ -226,6 +246,18 @@ const RoomShellBody = ({
 
   const handleUserHeard = useCallback(() => {
     lastHeardAtRef.current = Date.now()
+  }, [])
+
+  const handleAvatarSpeaking = useCallback((speaking: boolean) => {
+    if (speaking) avatarSpokeAtRef.current = Date.now()
+    setIsAvatarSpeaking(speaking)
+  }, [])
+
+  useEffect(() => {
+    mountedRef.current = true
+    return () => {
+      mountedRef.current = false
+    }
   }, [])
 
   const handleAvatarStatus = useCallback((status: AvatarStatus) => {
@@ -262,7 +294,7 @@ const RoomShellBody = ({
   // lands or this component (avatar session and transcript bridge included)
   // unmounts mid-landing.
   const handleLand = useCallback(
-    (reason: "time" | "idle" | "verdict") => {
+    (reason: "time" | "idle" | "verdict" | "goodbye") => {
       if (endedRef.current) return
       endedRef.current = true
       onLanding()
@@ -329,13 +361,31 @@ const RoomShellBody = ({
   // unmount, and only ever finds an id when no avatar arrived.
   useEffect(() => () => abandonPendingSession(), [abandonPendingSession])
 
-  const phase = roomStartedAt ? roomTimePhase(roomStartedAt, now) : "open"
+  const pack = getPack(practice?.packId)
+  // Rooms from before the budget field ran the default; a practice that
+  // vanished under a live session keeps the default shape.
+  const roomMs = session.roomMs ?? ROOM_MS
+  const closingRead = practice ? variantOf(pack, practice.scope).closingRead : true
+  const phase = roomStartedAt ? roomTimePhase(roomStartedAt, now, roomMs) : "open"
+  // The closing invitation presumes a panelist with a read to deliver.
   const invitation =
-    roomStartedAt && shouldInvite(roomStartedAt, now) && !isAvatarSpeaking
+    roomStartedAt && closingRead && shouldInvite(roomStartedAt, now, roomMs) && !isAvatarSpeaking
       ? pickInvitation(session._creationTime, firstNameOf(session.persona.name))
       : null
+  // A room without a closing read winds down in the open, in the top chip:
+  // the cue from the closing phase, then the time-up beats. Softly worded
+  // on purpose: the mic goes off with a reason, never as a rebuke.
+  const timeChip =
+    !closingRead && roomStartedAt && !landing
+      ? lastWordAt !== null
+        ? `Your mic is off. ${firstNameOf(session.persona.name)} has the last word.`
+        : phase === "over"
+          ? "Time's up. Finish your thought."
+          : phase === "closing" || phase === "resolving"
+            ? COLD_CALL_CUE
+            : null
+      : null
 
-  const pack = getPack(practice?.packId)
   const persona = session.persona
   // A live session left idle past the threshold reads as over: one
   // interrogation is one sitting. Judged against mount time so the state
@@ -411,11 +461,18 @@ const RoomShellBody = ({
   // show the user. Everything else is the attempt's truth.
   const handleAvatarError = useCallback(
     (err: Error) => {
-      if (err.name === "AbortError") return
+      // An abort while the room is still mounted is React re-running the
+      // mount (dev strict mode, a remount mid-connect): the SDK caches the
+      // abort as a permanent error for this key, so the only way forward is
+      // a fresh attempt. After unmount it is the room cancelling itself.
+      if (err.name === "AbortError") {
+        if (mountedRef.current) handleRetryConnect()
+        return
+      }
       if (!TERMINAL_CONNECT_CODES.has(err.message) && trySilentRetry()) return
       setAvatarError(err)
     },
-    [trySilentRetry]
+    [trySilentRetry, handleRetryConnect]
   )
 
   // The session can hang without ever erroring (observed live: LiveKit
@@ -586,12 +643,12 @@ const RoomShellBody = ({
   )
   const [idlePrompt, setIdlePrompt] = useState(false)
 
-  // The wall clock is the external system this room synchronizes with. One
-  // tick does four jobs: advance `now` so the rendered phase and idle state
-  // move, land the room the moment the clock runs out, land it if the room
-  // has sat idle too long, and land it once a delivered close has had its
-  // goodbye grace. Absolute timestamps, so a throttled
-  // background tab still lands at the right wall-clock moment. The idle-end
+  // The wall clock is the external system this room synchronizes with, and
+  // this tick is the one place a room ends: it advances `now` so the
+  // rendered phase and idle state move, lands the room when the clock runs
+  // out, lands it if the room has sat idle too long, and runs the sign-off
+  // ribbon from its first frame to the drop. Absolute timestamps, so a
+  // throttled background tab still lands at the right wall-clock moment. The idle-end
   // check hits the same react-hooks/set-state-in-effect rule the time check
   // does, so it recomputes fresh (not from the render-derived `idle`) inside
   // this same subscription callback rather than its own effect.
@@ -599,19 +656,59 @@ const RoomShellBody = ({
     const tick = setInterval(() => {
       const at = Date.now()
       setNow(at)
+      const userSpeaking =
+        lastHeardAtRef.current !== null && at - lastHeardAtRef.current < USER_SPEECH_GAP_MS
       if (roomStartedAt !== undefined && !failedEmptyRoom) {
-        const reached = roomTimePhase(roomStartedAt, at)
-        // The persona's close is never cut by our clock except at the floor.
-        const atFloor = at - roomStartedAt >= ROOM_MS - 2_000
-        if ((reached === "resolving" || reached === "over") && (!isAvatarSpeaking || atFloor)) {
-          handleLand("time")
+        const elapsed = at - roomStartedAt
+        if (closingRead) {
+          if (shouldLandOnTime(elapsed, roomMs, isAvatarSpeaking)) handleLand("time")
+        } else {
+          // Time-up without a closing read: finish the thought, then the
+          // persona gets the last word, then the line drops.
+          const beat = coldTimeUp({
+            elapsed,
+            roomMs,
+            now: at,
+            userSpeaking,
+            avatarSpeaking: isAvatarSpeaking,
+            avatarSpokeAt: avatarSpokeAtRef.current,
+            lastWordAt,
+          })
+          // A sign-off already ending the call finishes it; the clock does
+          // not start a second ending underneath the ribbon.
+          if (beat === "handOff" && ribbonAt === null) {
+            setLastWordAt(at)
+            muteMic()
+          }
+          if (beat === "land") handleLand("time")
         }
       }
-      // A delivered close ends the session it belongs to: dead air past the
-      // closing read is paid time spent on prompted brush-offs (observed
-      // live as a minute of silence into the clock).
-      if (!failedEmptyRoom && shouldLandAfterClose(session.closeDeliveredAt, at, isAvatarSpeaking)) {
-        handleLand("verdict")
+      // The sign-off protocol: someone signed off, the other replied, the
+      // ribbon plays, the line drops. Once the clock has handed the persona
+      // the last word, that ending owns the room: a goodbye spoken as the
+      // last word must not raise a ribbon over a muted mic.
+      if (!failedEmptyRoom && lastWordAt === null) {
+        const drop =
+          signOffPhase({
+            signOff: session.signOff,
+            closingRead,
+            now: at,
+            avatarSpeaking: isAvatarSpeaking,
+            avatarSpokeAt: avatarSpokeAtRef.current,
+            userHeardAt: lastHeardAtRef.current,
+          }) === "drop"
+        // The ribbon follows the stamp: it retracts when the other party
+        // talks past the goodbye and the check clears it. "Keep going"
+        // clears ribbonAt the same way, and the next tick stands down.
+        setRibbonAt((current) => (drop ? (current ?? at) : null))
+        if (
+          drop &&
+          ribbonAt !== null &&
+          session.signOff &&
+          landAfterRibbon(ribbonAt, at, isAvatarSpeaking)
+        ) {
+          handleLand(session.signOff.by === "user" ? "goodbye" : "verdict")
+        }
       }
       const idle = idleState(roomActivityAt(), at, idleSuspended)
       setIdlePrompt(idle === "prompt")
@@ -620,13 +717,25 @@ const RoomShellBody = ({
     return () => clearInterval(tick)
   }, [
     roomStartedAt,
+    roomMs,
+    closingRead,
+    lastWordAt,
+    ribbonAt,
+    muteMic,
     handleLand,
     idleSuspended,
     isAvatarSpeaking,
     roomActivityAt,
-    session.closeDeliveredAt,
+    session.signOff,
     failedEmptyRoom,
   ])
+
+  const handleKeepGoing = () => {
+    setRibbonAt(null)
+    dismissSignOff({ id: session._id }).catch((err) =>
+      console.error("dismiss sign-off failed:", err)
+    )
+  }
 
   return (
     // Below lg the 580px of fixed side tracks can't exist: the room stacks —
@@ -805,16 +914,20 @@ const RoomShellBody = ({
                     Establishing the live session (can take up to a minute)
                   </p>
                   <p className="font-mono text-[10px] uppercase tracking-[.1em] text-[#544f45]/50">
-                    {`Sessions run five minutes. ${firstNameOf(persona.name)} will call time near the end.`}
+                    {`Sessions run ${minutesPhrase(roomMs / 60_000)}.${closingRead ? ` ${firstNameOf(persona.name)} will call time near the end.` : ""}`}
                   </p>
                 </div>
               </div>
             }
           >
-            <TranscriptBridge sessionId={session._id} character={persona} />
+            <TranscriptBridge
+              sessionId={session._id}
+              character={persona}
+              avatarSpeaking={isAvatarSpeaking}
+            />
             <MicBridge onStateChange={setIsMicEnabled} toggleRef={toggleMicRef} />
             <SessionStatusBridge
-              onSpeakingChange={setIsAvatarSpeaking}
+              onSpeakingChange={handleAvatarSpeaking}
               onMicError={setMicError}
               onAvatarStatus={handleAvatarStatus}
             />
@@ -843,9 +956,17 @@ const RoomShellBody = ({
               aria-hidden="true"
               className={`h-2 w-2 rounded-full bg-red ${sessionOver || landing ? "" : "animate-pulse-red"}`}
             />
-            {sessionOver ? "Ended" : landing ? "Wrapping up" : "Recording"}
+            {sessionOver
+              ? "Ended"
+              : landing
+                ? "Wrapping up"
+                : roomStartedAt === undefined
+                  ? "Connecting"
+                  : "Recording"}
           </span>
-          {!sessionOver && !landing && <SessionClock />}
+          {!sessionOver && !landing && roomStartedAt !== undefined && (
+            <SessionClock startedAt={roomStartedAt} />
+          )}
         </div>
 
         {invitation && !landing && (
@@ -856,7 +977,38 @@ const RoomShellBody = ({
           </div>
         )}
 
-        {idlePrompt && !landing && (
+        {ribbonAt !== null && !landing && (
+          <div
+            role="status"
+            className="absolute bottom-[110px] left-1/2 z-[5] flex -translate-x-1/2 animate-fade-in items-center gap-4 rounded-full border border-accent-blue/60 bg-black/80 py-2.5 pl-5 pr-2.5 shadow-card motion-reduce:animate-none max-lg:bottom-[124px]"
+          >
+            <span className="flex items-center gap-2.5 font-mono text-[12.5px] uppercase tracking-[.12em] text-white">
+              <span aria-hidden="true" className="h-2 w-2 rounded-full bg-red animate-pulse-red" />
+              Ending the call
+            </span>
+            <button
+              type="button"
+              onClick={handleKeepGoing}
+              className="focus-ring rounded-full bg-accent-blue px-3.5 py-1.5 font-mono text-[12px] font-medium uppercase tracking-[.1em] text-primary-foreground transition-colors hover:bg-accent-blue/85"
+            >
+              Keep going
+            </button>
+          </div>
+        )}
+
+        {timeChip && (
+          <div
+            key={timeChip}
+            role="status"
+            className="absolute left-1/2 top-[18px] z-[5] -translate-x-1/2 animate-fade-in rounded-[10px] border border-accent-blue/60 bg-black/70 px-4 py-2 motion-reduce:animate-none max-lg:top-12 max-lg:w-[calc(100%-32px)]"
+          >
+            <p className="font-mono text-[11.5px] uppercase tracking-[.12em] text-white">
+              {timeChip}
+            </p>
+          </div>
+        )}
+
+        {idlePrompt && !landing && !timeChip && (
           <div className="absolute left-1/2 top-[18px] z-[5] -translate-x-1/2 rounded-[10px] border border-line-2 bg-black/60 px-4 py-2 max-lg:top-12 max-lg:w-[calc(100%-32px)]">
             <p className="font-mono text-[11px] uppercase tracking-[.12em] text-white/85">
               Still there? The session wraps up shortly if the room stays quiet.
@@ -866,7 +1018,8 @@ const RoomShellBody = ({
 
         {(micState === "muted" || micState === "blocked" || (micLive && transcriptionFailed)) &&
           !landing &&
-          !sessionOver && (
+          !sessionOver &&
+          !timeChip && (
             <div className="absolute left-1/2 top-[18px] z-[5] -translate-x-1/2 rounded-[10px] border border-line-2 bg-black/60 px-4 py-2 max-lg:top-12 max-lg:w-[calc(100%-32px)]">
               <p className="font-mono text-[11px] uppercase tracking-[.12em] text-white/85">
                 {micState === "blocked"
@@ -965,12 +1118,12 @@ const RoomShellBody = ({
         <div className="min-h-0 flex-[1.25] border-b border-line">
           <TranscriptPanel
             transcript={session.transcript}
-            startedAt={session._creationTime}
+            startedAt={roomStartedAt ?? session._creationTime}
             delayUserMs={sessionOver ? undefined : USER_TRANSCRIPT_DELAY_MS}
           />
         </div>
         <div className="min-h-0 flex-1">
-          <LiveNotes notes={session.liveNotes} startedAt={session._creationTime} />
+          <LiveNotes notes={session.liveNotes} startedAt={roomStartedAt ?? session._creationTime} />
         </div>
       </aside>
 
@@ -1000,12 +1153,12 @@ const RoomShellBody = ({
             <div className="min-h-0 flex-[1.25] border-b border-line">
               <TranscriptPanel
                 transcript={session.transcript}
-                startedAt={session._creationTime}
+                startedAt={roomStartedAt ?? session._creationTime}
                 delayUserMs={sessionOver ? undefined : USER_TRANSCRIPT_DELAY_MS}
               />
             </div>
             <div className="min-h-0 flex-1">
-              <LiveNotes notes={session.liveNotes} startedAt={session._creationTime} />
+              <LiveNotes notes={session.liveNotes} startedAt={roomStartedAt ?? session._creationTime} />
             </div>
           </div>
         </div>

@@ -9,6 +9,8 @@ import {
   type BriefingInput,
   type RoomBriefing,
 } from "../types.ts"
+import { COLD_CALL_MINUTES, isColdCall } from "./variant.ts"
+import { minutesPhrase } from "../../lib/ending.ts"
 
 // Same pause discipline as the founder lane, in the buyer's frame: the GWM
 // engine fills silence with presence check-ins, and a buyer who narrates
@@ -28,13 +30,40 @@ character demands.
 const DIGEST_TURNS = 6
 const DIGEST_TURN_CHARS = 160
 
+const resumeDigest = (transcript: BriefingInput["transcript"]): string =>
+  bySpokenTime(transcript)
+    .slice(-DIGEST_TURNS)
+    .map((e) => `${e.type === "user" ? "SELLER" : "YOU"}: ${e.text.slice(0, DIGEST_TURN_CHARS)}`)
+    .join("\n")
+
+// A cold call: the prospect knows only who they are. No materials, no
+// gaps, no ask, no memory of earlier sessions; the seller's offer is what
+// the call is for them to find out. The no-hang-up rules live here rather
+// than on the Character so the room's ending stays the clock's.
+const buildColdCallBriefing = ({ scope, transcript }: BriefingInput): RoomBriefing => {
+  const prospect = scopeText(scope, "prospect")
+  if (transcript.length > 0) {
+    return {
+      personalityPreamble: `Session context: this resumes a cold call that dropped mid-conversation. Do not introduce yourself again and do not repeat what you already said. The recent exchange:\n${resumeDigest(transcript)}\nPick the call back up from there.\n\n`,
+      startScript: "Sorry, lost you for a second. You were saying?",
+    }
+  }
+  return {
+    personalityPreamble:
+      composeWithinBudget([
+        `Session context: this is a cold call. You are ${prospect}. You did not expect this call and you know nothing about the caller, their company, or what they sell until they tell you; never pretend otherwise. You have read no materials and have no history with this person.`,
+        ` You do not hang up. Give the caller at least three exchanges before you decide anything, and a real question about your operation earns them another. Before any goodbye, say you have to get back to it and give them one last chance to say something specific; if they waste it, stay on the line but stop helping: short brush-offs, no questions, no agreements. Never coach or explain what they should have done.`,
+        ` When the caller asks for a specific, small next step and offers a time, take one of the times or name your own, unless they have argued with you or told you nothing about your business. Before you say yes to any next step, raise one real objection about cost, switching, or the system you already have, and let how they handle it decide. Once you have said you have to go, a second push for the meeting is the end of the call: say bye and stop.`,
+        ` This call runs about ${minutesPhrase(COLD_CALL_MINUTES)}. When it has run its course, end it the way you would: say you have to get back to it, say goodbye, and stop.`,
+      ]) + "\n\n",
+    startScript: "Yeah, this is Greg.",
+  }
+}
+
 // Per-session avatar briefing, assembled from what the app already knows.
-export const buildRoomBriefing = ({
-  scope,
-  audit,
-  continuity,
-  transcript,
-}: BriefingInput): RoomBriefing => {
+export const buildRoomBriefing = (input: BriefingInput): RoomBriefing => {
+  if (isColdCall(input.scope)) return buildColdCallBriefing(input)
+  const { scope, audit, continuity, transcript } = input
   const offering = scopeText(scope, "offering")
   const description = scopeText(scope, "description")
   const prospect = scopeText(scope, "prospect")
@@ -42,10 +71,7 @@ export const buildRoomBriefing = ({
   const expected = scopeList(scope, "objections")
 
   if (transcript.length > 0) {
-    const digest = bySpokenTime(transcript)
-      .slice(-DIGEST_TURNS)
-      .map((e) => `${e.type === "user" ? "SELLER" : "YOU"}: ${e.text.slice(0, DIGEST_TURN_CHARS)}`)
-      .join("\n")
+    const digest = resumeDigest(transcript)
     return {
       personalityPreamble: `Session context: this resumes an earlier conversation with the same seller about "${offering}". Do not introduce yourself again and do not repeat questions already asked. The recent exchange:\n${digest}\nContinue the conversation from there.\n\n`,
       startScript:

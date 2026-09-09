@@ -7,7 +7,7 @@ import { api } from "@convex/_generated/api"
 import { Id } from "@convex/_generated/dataModel"
 import { cn } from "@/lib/utils"
 import { BTN_PRIMARY } from "@/components/shared/buttons"
-import { getPack } from "@/domains/registry"
+import { getPack, variantOf } from "@/domains/registry"
 import { scopeText } from "@/domains/types"
 import { WaitingScreen } from "@/components/simulation/flow/WaitingScreen"
 import { IdeaNotFound } from "@/components/simulation/flow/IdeaNotFound"
@@ -28,12 +28,16 @@ export const AnalysisPipeline = ({ simulationId }: AnalysisPipelineProps) => {
   const [attempt, setAttempt] = useState(0)
 
   const ready = practice?.status === "ready" && !!practice.context
+  // A practice without prep never has a read; a typed URL lands here only
+  // by accident, and the panel is where it belongs.
+  const skipsPrep = practice ? !variantOf(getPack(practice.packId), practice.scope).prep : false
 
   // The findings live on the Audit stage — advance the moment the read
   // completes rather than making the user wait out the animation.
   useEffect(() => {
-    if (ready) router.replace(`/simulation/${simulationId}/audit`)
-  }, [ready, router, simulationId])
+    if (skipsPrep) router.replace(`/simulation/${simulationId}/panel`)
+    else if (ready) router.replace(`/simulation/${simulationId}/audit`)
+  }, [ready, skipsPrep, router, simulationId])
 
   // Watchdog re-arms per attempt so a hung retry surfaces again.
   useEffect(() => {

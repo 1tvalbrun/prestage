@@ -33,6 +33,7 @@ export const UserSpeechBridge = ({
 }: UserSpeechBridgeProps) => {
   const addTranscriptEntry = useMutation(api.sessions.addTranscriptEntry)
   const decide = useAction(api.orchestrator.decide)
+  const checkSignOff = useAction(api.sessions.checkSignOff)
 
   useEffect(() => {
     if (!enabled) {
@@ -58,6 +59,9 @@ export const UserSpeechBridge = ({
         if (result?.written) {
           decide({ sessionId }).catch((err) =>
             console.error("orchestrator.decide failed:", err)
+          )
+          checkSignOff({ sessionId }).catch((err) =>
+            console.error("sessions.checkSignOff failed:", err)
           )
         }
       } catch (err) {
@@ -88,7 +92,7 @@ export const UserSpeechBridge = ({
       // was in flight.
       void stream.stop()
     }
-  }, [sessionId, enabled, addTranscriptEntry, decide, onFailureChange, onHeard])
+  }, [sessionId, enabled, addTranscriptEntry, decide, checkSignOff, onFailureChange, onHeard])
 
   return null
 }

@@ -34,6 +34,7 @@ const ConsumeSchema = z.object({
 // Runway key and wall-clock patience: the READY poll, the consume exchange,
 // and the best-effort cancel on every path that strands a minted session.
 export const POST = async (req: NextRequest) => {
+  const routeStartedAt = Date.now()
   const { userId, getToken } = await auth()
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
@@ -130,7 +131,7 @@ export const POST = async (req: NextRequest) => {
       return NextResponse.json({ error: "Session failed", code: "failed" }, { status: 500 })
     }
     if (status.status === "NOT_READY" && status.queued) sawQueued = true
-    await new Promise((r) => setTimeout(r, 1000))
+    await new Promise((r) => setTimeout(r, 250))
   }
 
   if (!sessionKey) {
@@ -151,9 +152,13 @@ export const POST = async (req: NextRequest) => {
   // The avatar is READY: start the server-owned room clock now, not at the
   // claim — failed attempts before this point must not burn room time.
   // Best-effort: an unstamped clock means the room never time-lands, and
-  // the idle rule still ends it.
+  // the idle rule still ends it. The connect time rides along so
+  // production connects are measured.
   await convex
-    .mutation(api.sessions.markRoomStarted, { id: convexSessionId as Id<"sessions"> })
+    .mutation(api.sessions.markRoomStarted, {
+      id: convexSessionId as Id<"sessions">,
+      connectMs: Date.now() - routeStartedAt,
+    })
     .catch((err) => {
       console.warn("[/api/avatar/connect] room clock stamp failed:", err)
     })

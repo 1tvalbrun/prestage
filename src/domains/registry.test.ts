@@ -1,6 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { ALL_PACKS, PACKS } from "./registry.ts"
+import { ALL_PACKS, PACKS, lockedPersona, variantOf } from "./registry.ts"
+import { ROOM_MS } from "../lib/roomClock.ts"
 
 // Type-level coverage rides along: this file only compiles/runs if every
 // pack satisfies the discriminated prep contract.
@@ -56,4 +57,38 @@ test("the interview recommendation follows the interview type and defaults to th
   assert.equal(recommend({ interviewType: "Technical & scenarios" })?.personaId, "practitioner-01")
   assert.equal(recommend({ interviewType: "Full loop (mixed)" })?.personaId, "hm-01")
   assert.equal(recommend({})?.personaId, "hm-01")
+})
+
+test("a pack without variants resolves to its own shape, whatever the scope", () => {
+  const variant = variantOf(PACKS.founder, { anything: "at all" })
+  assert.equal(variant.scopeFields, PACKS.founder.scopeFields)
+  assert.equal(variant.prep, true)
+  assert.equal(variant.personaId, null)
+  assert.equal(variant.roomMinutes, ROOM_MS / 60_000)
+  assert.equal(variant.closingRead, true)
+  assert.equal(variant.remembers, true)
+  assert.equal(variant.verdicts, PACKS.founder.verdicts)
+  assert.equal(variant.copy.panelLead, PACKS.founder.copy.panel.lead)
+  assert.equal(variant.copy.preview, PACKS.founder.copy.preview)
+  assert.equal(variant.copy.formSections, PACKS.founder.copy.form.sections)
+})
+
+test("lockedPersona is the single persona of a one-persona lane, else the variant's lock, else null", () => {
+  assert.equal(lockedPersona(PACKS.audit, variantOf(PACKS.audit, {}))?.id, PACKS.audit.personas[0].id)
+  assert.equal(lockedPersona(PACKS.founder, variantOf(PACKS.founder, {})), null)
+  const locked = { ...variantOf(PACKS.founder, {}), personaId: PACKS.founder.personas[1].id }
+  assert.equal(lockedPersona(PACKS.founder, locked)?.id, PACKS.founder.personas[1].id)
+})
+
+test("the sales lane's call types pick the buyer and the vocabulary", () => {
+  assert.equal(PACKS.sales.variantField, "callType")
+  assert.deepEqual(
+    PACKS.sales.personas.map((persona) => persona.id),
+    ["buyer-01", "prospect-01"]
+  )
+  assert.deepEqual(
+    PACKS.sales.verdicts.options.map((option) => option.value),
+    ["buy", "second-meeting", "walk", "booked", "follow-up", "brushed-off"]
+  )
+  assert.equal(PACKS.sales.sessionMetaField, "callType")
 })

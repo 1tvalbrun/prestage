@@ -89,7 +89,7 @@ export const claimAvatarConnect = mutation({
     // reports the avatar READY): a claim stamped it here once, which meant
     // every failed connect attempt burned room time — a user who couldn't
     // connect five times arrived at "complete" without one spoken word.
-    const budget = maxDurationSec(session.roomStartedAt, now)
+    const budget = maxDurationSec(session.roomStartedAt, now, session.roomMs)
     if (budget === null) return { allowed: false, reason: "complete" }
     const prior = await ctx.db
       .query("usageEvents")

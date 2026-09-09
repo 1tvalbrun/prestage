@@ -8,10 +8,17 @@ import {
 } from "./_generated/server"
 import { api, internal } from "./_generated/api"
 import type { Doc, Id } from "./_generated/dataModel"
-import { bySpokenTime } from "../src/lib/transcript"
+import { bySpokenTime, spokenTime } from "../src/lib/transcript"
+import {
+  SIGN_OFF_PROMPT,
+  renderWindow,
+  resolveSignOff,
+  signOffLines,
+  type SignOffBy,
+} from "../src/lib/signOff"
 import { parseDebrief } from "../src/lib/debrief"
 import { createOpenAI, modelSettings } from "../src/lib/openai"
-import { getPack } from "../src/domains/registry"
+import { getPack, variantOf } from "../src/domains/registry"
 import type { DomainPack } from "../src/domains/types"
 import { ROOM_MS } from "../src/lib/roomClock"
 import { IDLE_END_MS, IDLE_PROMPT_MS } from "../src/lib/idleRule"
@@ -48,11 +55,10 @@ const LATE_WRITE_GRACE_MS = 15_000
 // registry, so neither can be injected. Only the session-relevant slice of
 // the persona is stored — the pack carries UI-only fields (image, attack,
 // bio, tags) that would fail the schema. Shared by sessions.create and
-// practices.continueSession.
+// practices.continueSession, which both hold the owned practice already.
 export const insertSessionForPersona = async (
   ctx: MutationCtx,
-  practiceId: Id<"practices">,
-  userId: string,
+  practice: Doc<"practices">,
   pack: DomainPack,
   personaId: string
 ): Promise<Id<"sessions">> => {
@@ -64,8 +70,8 @@ export const insertSessionForPersona = async (
     .first()
   if (!avatar) throw new Error("No avatar registered for this panelist")
   const sessionId = await ctx.db.insert("sessions", {
-    practiceId,
-    userId,
+    practiceId: practice._id,
+    userId: practice.userId,
     persona: {
       id: persona.id,
       archetypeId: persona.archetypeId,
@@ -74,19 +80,17 @@ export const insertSessionForPersona = async (
       tone: persona.tone,
       avatarId: avatar.runwayAvatarId,
     },
+    roomMs: variantOf(pack, practice.scope).roomMinutes * 60_000,
     transcript: [],
     liveNotes: [],
     status: "live",
   })
   // Rollup sync for practices.list: this is the only sessions insert site,
   // so counting here keeps the denormalized fields truthful by construction.
-  const practice = await ctx.db.get(practiceId)
-  if (practice) {
-    await ctx.db.patch(practiceId, {
-      sessionCount: (practice.sessionCount ?? 0) + 1,
-      lastSessionAt: Date.now(),
-    })
-  }
+  await ctx.db.patch(practice._id, {
+    sessionCount: (practice.sessionCount ?? 0) + 1,
+    lastSessionAt: Date.now(),
+  })
   return sessionId
 }
 
@@ -107,8 +111,7 @@ export const create = mutation({
     if (live) return live._id
     const sessionId = await insertSessionForPersona(
       ctx,
-      args.practiceId,
-      identity.subject,
+      practice,
       getPack(practice.packId),
       args.personaId
     )
@@ -229,9 +232,9 @@ export const addTranscriptEntry = mutation({
 // actually near its end (the slack covers the speech-grace floor landing at
 // T minus two seconds); "idle" needs the record actually quiet for the
 // prompt-plus-end window; "error" needs a one-sided record — the same
-// nothing-on-record rule generateDebrief enforces; "verdict" needs the
-// close the server itself stamped (closeDeliveredAt, written only by
-// orchestrator.decide) — the client can only claim what the record shows.
+// nothing-on-record rule generateDebrief enforces; "verdict" and "goodbye"
+// need the sign-off the server itself stamped (signOff, written only by
+// checkSignOff) — the client can only claim what the record shows.
 const TIME_SLACK_MS = 20_000
 const IDLE_SLACK_MS = 10_000
 
@@ -242,7 +245,7 @@ const verifiedEndedReason = (
 ): EndedReason => {
   if (claimed === "time") {
     return session.roomStartedAt !== undefined &&
-      now - session.roomStartedAt >= ROOM_MS - TIME_SLACK_MS
+      now - session.roomStartedAt >= (session.roomMs ?? ROOM_MS) - TIME_SLACK_MS
       ? "time"
       : "user"
   }
@@ -260,7 +263,10 @@ const verifiedEndedReason = (
     return !hasUserTurn || !hasPanelistTurn ? "error" : "user"
   }
   if (claimed === "verdict") {
-    return session.closeDeliveredAt !== undefined ? "verdict" : "user"
+    return session.signOff !== undefined && session.signOff.by !== "user" ? "verdict" : "user"
+  }
+  if (claimed === "goodbye") {
+    return session.signOff !== undefined ? "goodbye" : "user"
   }
   return "user"
 }
@@ -298,13 +304,16 @@ export const end = mutation({
 // token; a direct caller can only start their own live session's clock
 // early, which costs them time, not us.
 export const markRoomStarted = mutation({
-  args: { id: v.id("sessions") },
+  args: { id: v.id("sessions"), connectMs: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
     const session = ownedOrNull(identity, await ctx.db.get(args.id))
     if (!session || session.status !== "live") return
     if (session.roomStartedAt !== undefined) return
-    await ctx.db.patch(args.id, { roomStartedAt: Date.now() })
+    await ctx.db.patch(args.id, {
+      roomStartedAt: Date.now(),
+      ...(args.connectMs !== undefined ? { connectMs: args.connectMs } : {}),
+    })
   },
 })
 
@@ -345,15 +354,135 @@ export const claimOrchestrate = internalMutation({
   },
 })
 
-// Internal: written only by orchestrator.decide. First stamp wins — the
-// detector reports conversation state, so later decides re-affirming the
-// same close must not move the landing clock.
-export const markCloseDelivered = internalMutation({
+// Spend guard for the paid sign-off check: turns arrive seconds apart, so
+// one check per second per session never refuses a real turn, and bounds
+// what a looping caller can bill.
+const SIGN_OFF_CHECK_WINDOW_MS = 1_000
+
+export const claimSignOffCheck = internalMutation({
   args: { id: v.id("sessions") },
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.id)
-    if (!session || session.status !== "live" || session.closeDeliveredAt !== undefined) return
-    await ctx.db.patch(args.id, { closeDeliveredAt: Date.now() })
+    if (!session || session.status !== "live") return false
+    const now = Date.now()
+    if (
+      session.lastSignOffCheckAt !== undefined &&
+      now - session.lastSignOffCheckAt < SIGN_OFF_CHECK_WINDOW_MS
+    ) {
+      return false
+    }
+    await ctx.db.patch(args.id, { lastSignOffCheckAt: now })
+    return true
+  },
+})
+
+// Internal: written only by checkSignOff, once per check. A one-sided
+// stamp is provisional until the other party answers: their goodbye makes
+// it "both", anything spoken after it clears it (the conversation went
+// on, as when the prospect says "take care" and the seller talks past it).
+// A re-affirmation of the same party's sign-off keeps the original stamp so
+// the landing clock never moves; "both" is final.
+export const reconcileSignOff = internalMutation({
+  args: {
+    id: v.id("sessions"),
+    result: v.union(v.literal("user"), v.literal("panelist"), v.literal("both"), v.null()),
+    // Spoken time of the newest line the check saw.
+    lastLineAt: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.id)
+    if (!session || session.status !== "live") return
+    const current = session.signOff
+    if (args.result === null) {
+      if (current && current.by !== "both" && args.lastLineAt > current.turnAt) {
+        await ctx.db.patch(args.id, { signOff: undefined })
+      }
+      return
+    }
+    if (current?.by === "both") return
+    if (current && current.by === args.result) return
+    const by = current && args.result !== "both" ? "both" : args.result
+    await ctx.db.patch(args.id, { signOff: { by, at: Date.now(), turnAt: args.lastLineAt } })
+  },
+})
+
+// "Keep going" on the ribbon. Owned and live only; the dismissal time
+// keeps the check from re-stamping on the goodbye it just dismissed.
+export const dismissSignOff = mutation({
+  args: { id: v.id("sessions") },
+  handler: async (ctx, args) => {
+    const identity = await requireIdentity(ctx)
+    const session = ownedOrNull(identity, await ctx.db.get(args.id))
+    if (!session || session.status !== "live") return
+    await ctx.db.patch(args.id, { signOff: undefined, signOffDismissedAt: Date.now() })
+  },
+})
+
+// The sign-off check: one fast model call over the last eight turns (plus
+// the panelist's in-progress line when the room sends one), on every turn,
+// so a reply to a goodbye is classified too. Public because the room calls
+// it with the caller's token; reads are ownership-scoped and the stamp is
+// reconciled server-side, so a direct caller can only end their own session
+// early.
+export const checkSignOff = action({
+  args: { sessionId: v.id("sessions"), provisional: v.optional(v.string()) },
+  handler: async (ctx, args): Promise<SignOffBy | null> => {
+    await requireIdentity(ctx)
+    const session = await ctx.runQuery(api.sessions.get, { id: args.sessionId })
+    if (!session || session.status !== "live" || session.signOff?.by === "both") return null
+    // Same clamp the transcript write applies: the line reaches the model
+    // at transcript size, whatever the caller sent.
+    const provisional = args.provisional?.trim().slice(0, TRANSCRIPT_ENTRY_CHARS) || undefined
+    const lines = signOffLines(session.transcript, session.signOffDismissedAt, provisional)
+    if (lines.length === 0) return null
+    const claimed = await ctx.runMutation(internal.sessions.claimSignOffCheck, {
+      id: args.sessionId,
+    })
+    if (!claimed) return null
+
+    const openai = await createOpenAI()
+    const settings = modelSettings("fast")
+    const response = await openai.chat.completions.create({
+      ...settings,
+      messages: [
+        { role: "system", content: SIGN_OFF_PROMPT },
+        { role: "user", content: renderWindow(lines) },
+      ],
+      response_format: { type: "json_object" },
+    })
+    await recordUsage(ctx, {
+      userId: session.userId,
+      kind: "close_check",
+      practiceId: session.practiceId,
+      sessionId: args.sessionId,
+      model: settings.model,
+      inputTokens: response.usage?.prompt_tokens,
+      outputTokens: response.usage?.completion_tokens,
+    })
+
+    // The model flags lines; who spoke them is read off our own labels, so
+    // a misattributed goodbye can never skip a verdict lane's closing read.
+    let flagged: number[] = []
+    try {
+      const parsed = JSON.parse(response.choices[0]?.message?.content ?? "")
+      if (Array.isArray(parsed.signOffLines)) {
+        flagged = parsed.signOffLines.filter((n: unknown): n is number => typeof n === "number")
+      }
+    } catch {
+      // Malformed output detects nothing; the next turn re-runs the check.
+    }
+    const by = resolveSignOff(lines, flagged)
+    // A provisional line has no committed turn yet: the check time stands
+    // in for it. Otherwise the newest committed turn is the line judged.
+    const lastLineAt = provisional
+      ? Date.now()
+      : Math.max(...session.transcript.map(spokenTime), 0)
+    await ctx.runMutation(internal.sessions.reconcileSignOff, {
+      id: args.sessionId,
+      result: by,
+      lastLineAt,
+    })
+    return by
   },
 })
 
@@ -558,12 +687,12 @@ export const generateDebrief = action({
     const content = response.choices[0]?.message?.content
     if (!content) throw new Error("Empty response from debrief generator")
 
+    const { verdicts } = variantOf(pack, practice.scope)
     const parsed = parseDebrief(JSON.parse(content), {
-      verdictValues: pack.verdicts.options.map((option) => option.value),
-      fallbackVerdict: pack.verdicts.fallback,
+      verdictValues: verdicts.options.map((option) => option.value),
+      fallbackVerdict: verdicts.fallback,
       lowestVerdict:
-        pack.verdicts.options.find((option) => option.tone === "bad")?.value ??
-        pack.verdicts.fallback,
+        verdicts.options.find((option) => option.tone === "bad")?.value ?? verdicts.fallback,
       userTurns,
     })
 

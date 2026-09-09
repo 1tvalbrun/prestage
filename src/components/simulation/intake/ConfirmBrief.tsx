@@ -3,7 +3,8 @@
 import { useState } from "react"
 import { ArrowLeft, ArrowRight, Pencil, Upload } from "lucide-react"
 import { cn } from "@/lib/utils"
-import type { DomainPack, Scope, ScopeValue } from "@/domains/types"
+import type { DomainPack, PracticeVariant, Scope, ScopeValue } from "@/domains/types"
+import { lockedPersona } from "@/domains/registry"
 import { scopeText } from "@/domains/types"
 import { BTN_PRIMARY } from "@/components/shared/buttons"
 import { ScopeFields, FIELD_INPUT } from "./ScopeFields"
@@ -13,6 +14,7 @@ import { firstNameOf } from "@/domains/types"
 
 type ConfirmBriefProps = {
   pack: DomainPack
+  variant: PracticeVariant
   heard: Scope
   seconds: number
   uploads: ReturnType<typeof useMaterialUploads>
@@ -27,6 +29,7 @@ type ConfirmBriefProps = {
 // finding, not a failure.
 export const ConfirmBrief = ({
   pack,
+  variant,
   heard,
   seconds,
   uploads,
@@ -39,12 +42,12 @@ export const ConfirmBrief = ({
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [missing, setMissing] = useState<string[]>([])
 
-  const textFields = pack.scopeFields.filter(
-    (field) => field.kind === "text" || field.kind === "textarea"
-  )
-  const chipFields = pack.scopeFields.filter(
-    (field) => field.kind === "chips" || field.kind === "multi"
-  )
+  const panelist = lockedPersona(pack, variant)
+  // The chooser already answered the variant field; confirming it again
+  // reads as a second question.
+  const fields = variant.scopeFields.filter((field) => field.key !== pack.variantField)
+  const textFields = fields.filter((field) => field.kind === "text" || field.kind === "textarea")
+  const chipFields = fields.filter((field) => field.kind === "chips" || field.kind === "multi")
 
   const handleChange = (key: string, value: ScopeValue) => {
     setScope((prev) => ({ ...prev, [key]: value }))
@@ -52,7 +55,7 @@ export const ConfirmBrief = ({
   }
 
   const handleSubmit = () => {
-    const gaps = missingRequired(pack, scope)
+    const gaps = missingRequired(variant.scopeFields, scope)
     if (gaps.length > 0) {
       setMissing(gaps)
       const firstText = textFields.find((field) => gaps.includes(field.key))
@@ -152,9 +155,9 @@ export const ConfirmBrief = ({
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
         <span className="text-[12.5px] text-on-surface-3">
-          {pack.personas.length > 1
-            ? "Your panel reads these before the session:"
-            : `${firstNameOf(pack.personas[0].name)} reads these before the session:`}
+          {panelist
+            ? `${firstNameOf(panelist.name)} reads these before the session:`
+            : "Your panel reads these before the session:"}
         </span>
         <label className="focus-ring inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-dashed border-line-2 px-3 py-1 text-xs text-on-surface-3 transition-colors hover:bg-surface-2 hover:text-accent-blue">
           <Upload className="size-[11px]" />
@@ -193,12 +196,12 @@ export const ConfirmBrief = ({
         >
           {submitting
             ? "Setting up"
-            : pack.personas.length > 1
-              ? "Looks right, choose your panel"
-              : `Looks right, meet ${firstNameOf(pack.personas[0].name)}`}
+            : panelist
+              ? `Looks right, meet ${firstNameOf(panelist.name)}`
+              : "Looks right, choose your panel"}
           <ArrowRight className="size-3.5" />
         </button>
-        <span className="text-[12.5px] text-on-surface-3">{ctaHint(pack)}</span>
+        <span className="text-[12.5px] text-on-surface-3">{ctaHint(panelist, variant.prep)}</span>
       </div>
     </div>
   )

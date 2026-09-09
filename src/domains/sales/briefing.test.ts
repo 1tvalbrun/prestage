@@ -2,6 +2,7 @@ import test from "node:test"
 import assert from "node:assert/strict"
 import { buildRoomBriefing } from "./briefing.ts"
 import type { Claim, Gap } from "../../lib/audit.ts"
+import { CALL_TYPE_KEY, COLD_CALL } from "./variant.ts"
 
 const scope = {
   offering: "CourtFlow",
@@ -125,4 +126,56 @@ test("continuity without open items keeps the standard opener but carries the me
   })
   assert.match(briefing.startScript, /you've got my attention/i)
   assert.match(briefing.personalityPreamble, /do not introduce yourself/i)
+})
+
+const coldScope = {
+  [CALL_TYPE_KEY]: COLD_CALL,
+  prospect: "Owner of a 12-truck HVAC company",
+  offering: "Dispatch software for service fleets",
+  goal: "Book a meeting",
+}
+
+test("a cold call casts the avatar as the prospect and tells them nothing about the caller", () => {
+  const briefing = buildRoomBriefing({ scope: coldScope, audit: null, continuity: null, transcript: [] })
+  assert.match(briefing.personalityPreamble, /Owner of a 12-truck HVAC company/)
+  assert.doesNotMatch(briefing.personalityPreamble, /Dispatch software/)
+  assert.doesNotMatch(briefing.personalityPreamble, /Book a meeting/)
+  assert.match(briefing.personalityPreamble, /cold call/i)
+  assert.match(briefing.personalityPreamble, /do not hang up/i)
+  assert.match(briefing.personalityPreamble, /about two minutes/)
+  assert.match(briefing.personalityPreamble, /at least three exchanges/)
+  assert.match(briefing.personalityPreamble, /one last chance/)
+  // A clean ask with a time wins; a push past a goodbye never does.
+  assert.match(briefing.personalityPreamble, /take one of the times or name your own/)
+  assert.match(briefing.personalityPreamble, /raise one real objection/)
+  assert.match(briefing.personalityPreamble, /second push for the meeting is the end of the call/)
+  assert.doesNotMatch(briefing.startScript, /minute/)
+  assert.match(briefing.startScript, /this is Greg/)
+})
+
+test("a cold call ignores audit and continuity: a stranger has read nothing and remembers nothing", () => {
+  const briefing = buildRoomBriefing({
+    scope: coldScope,
+    audit: { claims: [claim()], gaps: [gap("No pricing anywhere")] },
+    continuity: { lastSessionSummary: "Went well", actionItems: [], updatedAt: 0 },
+    transcript: [],
+  })
+  assert.doesNotMatch(briefing.personalityPreamble, /No pricing anywhere/)
+  assert.doesNotMatch(briefing.personalityPreamble, /earlier session/)
+  assert.doesNotMatch(briefing.startScript, /read through/)
+})
+
+test("a resumed cold call picks the call back up without a re-introduction", () => {
+  const briefing = buildRoomBriefing({
+    scope: coldScope,
+    audit: null,
+    continuity: null,
+    transcript: [
+      { text: "Hi Greg, this is Dana from FleetPath.", type: "user", timestamp: 1 },
+      { text: "What's this about?", type: "panelist", timestamp: 2 },
+    ],
+  })
+  assert.match(briefing.personalityPreamble, /What's this about\?/)
+  assert.match(briefing.personalityPreamble, /Do not introduce yourself again/)
+  assert.doesNotMatch(briefing.startScript, /this is Greg/)
 })

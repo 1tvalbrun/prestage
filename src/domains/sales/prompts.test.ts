@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import { analyzeSystem, analyzeUser, audit, debrief, extractScope, orchestrate } from "./prompts.ts"
 import { salesPack } from "./pack.ts"
 import type { Scope } from "../types.ts"
+import { CALL_TYPE_KEY, COLD_CALL } from "./variant.ts"
 
 // Pin tests for the sales prompts, written with the pack. They hold the
 // load-bearing lines (grounding rules, JSON contracts, the closed verdict
@@ -150,4 +151,58 @@ test("debrief compounds the engagement memory and forbids repeating tracked comm
   assert.match(prompt, /delivered: Send two operator references/)
   assert.match(prompt, /UPDATE the previous summary rather than writing a fresh one/)
   assert.match(prompt, /never repeat or rephrase a commitment already tracked/)
+})
+
+const coldScope: Scope = {
+  [CALL_TYPE_KEY]: COLD_CALL,
+  prospect: "Owner of a 12-truck HVAC company",
+  offering: "Dispatch software for service fleets",
+  goal: "Book a meeting",
+}
+
+const persona = {
+  characterName: "Greg Hollis",
+  characterRole: "Owner-operator, small local business",
+  characterTone: "Busy, polite, distracted at first",
+}
+
+test("the cold-call note-taker watches the opener, the brush-offs, and the ask, not the objection catalog", () => {
+  const prompt = orchestrate({ ...persona, scope: coldScope })
+  assert.match(prompt, /cold call/i)
+  assert.match(prompt, /Book a meeting/)
+  assert.match(prompt, /thirty seconds/i)
+  assert.doesNotMatch(prompt, /Common buyer objections/)
+  assert.match(prompt, /"note":\{"type"/)
+})
+
+test("the cold-call debrief judges against the goal and picks only cold outcomes", () => {
+  const prompt = debrief({
+    ...persona,
+    scope: coldScope,
+    notes: "(none)",
+    transcript: "SELLER: hi\nGREG HOLLIS: what's this about",
+    continuity: null,
+  })
+  assert.match(prompt, /"booked" \| "follow-up" \| "brushed-off"/)
+  assert.doesNotMatch(prompt, /"second-meeting"/)
+  assert.match(prompt, /Book a meeting/)
+  assert.match(prompt, /opener/i)
+  assert.match(prompt, /brush-off/i)
+  // The prospect asking for the email and getting a yes is a follow-up.
+  assert.match(prompt, /An email the prospect asked for and the seller agreed to send is "follow-up"/)
+  assert.match(prompt, /Never use em dashes/)
+  assert.match(prompt, /"heldUp"/)
+  assert.match(prompt, /"continuity"/)
+})
+
+test("the pitch-meeting debrief is untouched by the cold vocabulary", () => {
+  const prompt = debrief({
+    ...persona,
+    scope,
+    notes: "(none)",
+    transcript: "SELLER: hi",
+    continuity: null,
+  })
+  assert.match(prompt, /"buy" \| "second-meeting" \| "walk"/)
+  assert.doesNotMatch(prompt, /"booked"/)
 })
