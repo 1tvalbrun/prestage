@@ -6,6 +6,7 @@ import {
   type OrchestratePromptInput,
   type Scope,
 } from "../types.ts"
+import { previousGapsTask, resolvedContract } from "../../lib/audit.ts"
 import { areaByLabel, DEFAULT_AREA, type ControlArea } from "./catalog.ts"
 
 // The audit lane's OpenAI prompts. Same JSON contracts as the other lanes
@@ -57,7 +58,7 @@ Return JSON only, keyed exactly: {"systemName","description","role","controlArea
 The description:
 ${pitch.slice(0, 12_000)}`
 
-export const audit = ({ scope, unreadableCount, materialSections }: AuditPromptInput) => {
+export const audit = ({ scope, unreadableCount, materialSections, previousGaps }: AuditPromptInput) => {
   const area = areaOf(scope)
   return `You are a lead security assessor doing the document pre-read before an audit interview practice session.
 
@@ -75,7 +76,9 @@ TASK 1 — CLAIMS. List what the materials concretely establish against the safe
 
 TASK 2 — GAPS. What an assessor preparing on these safeguards expects and cannot find. Each: "severity" ("blocker" = the interview will stall on this; "gap" = weakens readiness), "kind" ("absent" = expected but in no material; "unsupported" = stated with no backing record), "title" (under 8 words), "detail" (under 25 words). 3 to 8 gaps, each traceable to a safeguard in scope.
 
-Return JSON only: {"claims":[{"text","source","location"}],"gaps":[{"severity","kind","title","detail"}]}`
+${previousGapsTask(previousGaps)}
+
+Return JSON only: {"claims":[{"text","source","location"}],"gaps":[{"severity","kind","title","detail"}]${resolvedContract(previousGaps)}}`
 }
 
 export const orchestrate = ({

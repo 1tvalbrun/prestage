@@ -27,6 +27,8 @@ export type Gap = Infer<typeof gapValidator>
 export type AuditResult = {
   claims: Claim[]
   gaps: Gap[]
+  // Previous gaps the latest materials resolved (a re-run only).
+  closed: Gap[]
 }
 
 export const MAX_CLAIMS = 15
@@ -59,16 +61,41 @@ const parseSeverity = (value: string | undefined): Gap["severity"] =>
 const parseKind = (value: string | undefined): Gap["kind"] =>
   value === "unsupported" ? "unsupported" : "absent"
 
+// The re-run's third task: the previous gaps by title, and which of them
+// the materials now answer. Empty when there is nothing to resolve, so a
+// first run's prompt is unchanged.
+export const previousGapsTask = (previousGaps: Gap[] | undefined): string =>
+  previousGaps && previousGaps.length > 0
+    ? `\n\nTASK 3 — RESOLVED. These gaps were found on an earlier read of fewer materials:\n${previousGaps
+        .map((gap) => `- ${gap.title}`)
+        .join(
+          "\n"
+        )}\nFor each, decide from the materials above whether it is now answered. Return the titles of the resolved ones under "resolved", copied exactly; leave the rest out. Do not list a resolved gap under "gaps" again.`
+    : ""
+
+export const resolvedContract = (previousGaps: Gap[] | undefined): string =>
+  previousGaps && previousGaps.length > 0 ? ',"resolved":["exact title"]' : ""
+
 // Validates model output against the actual materials. Claims that cite a
 // real source and location survive; everything else is demoted to an
-// "unsupported" gap. The model cannot assert what it cannot cite.
+// "unsupported" gap. The model cannot assert what it cannot cite. Resolved
+// gaps are drawn from our own previous list by exact title, so the model
+// can only close what we asked about.
 export const groundAudit = (
-  raw: { claims?: unknown; gaps?: unknown },
-  materials: GroundingMaterial[]
+  raw: { claims?: unknown; gaps?: unknown; resolved?: unknown },
+  materials: GroundingMaterial[],
+  previousGaps: Gap[] = []
 ): AuditResult => {
   const sources = new Map(
     materials.map((material) => [normalize(material.name), locationsIn(material.text)])
   )
+  const resolvedTitles = new Set(
+    (Array.isArray(raw.resolved) ? raw.resolved : [])
+      .map((entry: unknown) => asString(entry))
+      .flatMap((title) => (title ? [normalize(title)] : []))
+  )
+  const closed = previousGaps.filter((gap) => resolvedTitles.has(normalize(gap.title)))
+  const closedTitles = new Set(closed.map((gap) => normalize(gap.title)))
 
   const claims: Claim[] = []
   const gaps: Gap[] = []
@@ -99,7 +126,7 @@ export const groundAudit = (
   for (const entry of rawGaps) {
     if (gaps.length >= MAX_GAPS) break
     const title = asString(field(entry, "title"))
-    if (!title) continue
+    if (!title || closedTitles.has(normalize(title))) continue
     gaps.push({
       severity: parseSeverity(asString(field(entry, "severity"))?.toLowerCase()),
       kind: parseKind(asString(field(entry, "kind"))?.toLowerCase()),
@@ -108,5 +135,5 @@ export const groundAudit = (
     })
   }
 
-  return { claims, gaps: gaps.slice(0, MAX_GAPS) }
+  return { claims, gaps: gaps.slice(0, MAX_GAPS), closed }
 }

@@ -152,3 +152,16 @@ test("a first session has no engagement block", () => {
   })
   assert.doesNotMatch(prompt, /The engagement so far/)
 })
+
+test("a re-run's audit carries the previous gaps and the resolved contract; a first run does not", () => {
+  const previousGaps = [
+    { severity: "blocker" as const, kind: "absent" as const, title: "No pricing anywhere", detail: "d" },
+  ]
+  const rerun = audit({ scope, unreadableCount: 0, materialSections: "x", previousGaps })
+  assert.match(rerun, /TASK 3 — RESOLVED/)
+  assert.match(rerun, /- No pricing anywhere/)
+  assert.match(rerun, /"resolved":\["exact title"\]/)
+  const first = audit({ scope, unreadableCount: 0, materialSections: "x" })
+  assert.doesNotMatch(first, /TASK 3/)
+  assert.doesNotMatch(first, /"resolved"/)
+})

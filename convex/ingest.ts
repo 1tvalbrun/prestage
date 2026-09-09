@@ -113,7 +113,7 @@ export const extract = internalAction({
         result,
       })
 
-    const blob = await ctx.storage.get(material.storageId)
+    const blob = material.storageId ? await ctx.storage.get(material.storageId) : null
     if (!blob) {
       await setResult({ status: "failed", failureReason: "The upload didn't reach storage. Try again." })
       return
@@ -137,7 +137,9 @@ export const extract = internalAction({
     }
 
     // Kick the lane's prep stage once the last material settles; the claim
-    // mutations collapse concurrent triggers to a single run.
+    // mutations collapse concurrent triggers to a single run. The last
+    // material to settle is always the end of a change to the set (create
+    // or attach), so a ready audit is re-run on purpose.
     const settled = await ctx.runQuery(internal.materials.allSettled, {
       practiceId: material.practiceId,
     })
@@ -145,13 +147,16 @@ export const extract = internalAction({
       const kind = await ctx.runQuery(internal.practices.prepKind, {
         id: material.practiceId,
       })
-      await ctx.scheduler.runAfter(
-        0,
-        kind === "blueprint"
-          ? internal.blueprints.runInternal
-          : internal.practices.runAuditInternal,
-        { id: material.practiceId }
-      )
+      if (kind === "blueprint") {
+        await ctx.scheduler.runAfter(0, internal.blueprints.runInternal, {
+          id: material.practiceId,
+        })
+      } else {
+        await ctx.scheduler.runAfter(0, internal.practices.runAuditInternal, {
+          id: material.practiceId,
+          force: true,
+        })
+      }
     }
   },
 })

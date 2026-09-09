@@ -97,6 +97,10 @@ export const founderPack: DomainPack = {
   prep: {
     kind: "audit",
     stepLabel: "Pre-read",
+    start: {
+      label: "Run the pre-read",
+      hint: "Your panel reads everything first. You choose who to face after.",
+    },
     prompt: audit,
     wait: {
       kicker: "The audit · before the panel pushes",

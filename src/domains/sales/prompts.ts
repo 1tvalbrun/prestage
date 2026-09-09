@@ -6,6 +6,7 @@ import {
   type OrchestratePromptInput,
   type Scope,
 } from "../types.ts"
+import { previousGapsTask, resolvedContract } from "../../lib/audit.ts"
 import { OBJECTIONS } from "./objections.ts"
 import { isColdCall } from "./variant.ts"
 
@@ -50,7 +51,7 @@ Return JSON only, keyed exactly: {"offering","description","prospect","ask","obj
 The pitch:
 ${pitch.slice(0, 12_000)}`
 
-export const audit = ({ scope, unreadableCount, materialSections }: AuditPromptInput) =>
+export const audit = ({ scope, unreadableCount, materialSections, previousGaps }: AuditPromptInput) =>
   `You are a deal-diligence analyst auditing a seller's materials before a live pitch session.
 
 The seller's scope (their own words, NOT evidence):
@@ -64,7 +65,9 @@ TASK 1 — CLAIMS. List the concrete, buyer-relevant claims the materials actual
 
 TASK 2 — GAPS. What a skeptical buyer expects and cannot find. Each: "severity" ("blocker" = would stall a real deal; "gap" = weakens the pitch), "kind" ("absent" = expected but in no material; "unsupported" = stated in the scope or materials with no backing evidence), "title" (under 8 words), "detail" (under 25 words). 3 to 8 gaps.
 
-Return JSON only: {"claims":[{"text","source","location"}],"gaps":[{"severity","kind","title","detail"}]}`
+${previousGapsTask(previousGaps)}
+
+Return JSON only: {"claims":[{"text","source","location"}],"gaps":[{"severity","kind","title","detail"}]${resolvedContract(previousGaps)}}`
 
 const orchestrateColdCall = ({ characterName, characterRole, scope }: OrchestratePromptInput) =>
   `You are observing a live cold call. ${characterName} (${characterRole}) picked up a call they were not expecting; the seller is trying to earn their time. Take notes in real time.

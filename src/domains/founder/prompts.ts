@@ -6,6 +6,7 @@ import {
   type OrchestratePromptInput,
   type Scope,
 } from "../types.ts"
+import { previousGapsTask, resolvedContract } from "../../lib/audit.ts"
 
 // The founder lane's OpenAI prompts, moved out of the Convex actions that
 // inlined them (simulations, audits, orchestrator, debriefs). The pin
@@ -38,7 +39,7 @@ Return JSON only, keyed exactly: {"ideaName","description","whyNow","stage","bus
 The pitch:
 ${pitch.slice(0, 12_000)}`
 
-export const audit = ({ scope, unreadableCount, materialSections }: AuditPromptInput) =>
+export const audit = ({ scope, unreadableCount, materialSections, previousGaps }: AuditPromptInput) =>
   `You are a diligence analyst auditing a founder's materials before a panel session.
 
 The founder's brief (their own words, NOT evidence):
@@ -56,7 +57,9 @@ TASK 1 — CLAIMS. List the concrete, diligence-relevant claims the materials ac
 
 TASK 2 — GAPS. What a competent diligencer expects but cannot find. Each: "severity" ("blocker" = would stall a real process; "gap" = weakens the story), "kind" ("absent" = expected but in no material; "unsupported" = stated in the brief or materials with no backing evidence), "title" (under 8 words), "detail" (under 25 words). 3 to 8 gaps.
 
-Return JSON only: {"claims":[{"text","source","location"}],"gaps":[{"severity","kind","title","detail"}]}`
+${previousGapsTask(previousGaps)}
+
+Return JSON only: {"claims":[{"text","source","location"}],"gaps":[{"severity","kind","title","detail"}]${resolvedContract(previousGaps)}}`
 
 export const orchestrate = ({
   characterName,

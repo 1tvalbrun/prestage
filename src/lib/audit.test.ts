@@ -1,6 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { groundAudit, locationsIn } from "./audit.ts"
+import { groundAudit, locationsIn, previousGapsTask, resolvedContract } from "./audit.ts"
 
 const MATERIALS = [
   { name: "deck.pdf", text: "[page 1] intro [page 2] $2M ARR run-rate [page 3] team" },
@@ -103,4 +103,46 @@ test("malformed severities and kinds coerce to safe values, junk entries drop", 
   assert.deepEqual(result.gaps, [
     { severity: "gap", kind: "absent", title: "Weird gap", detail: "" },
   ])
+})
+
+const PREVIOUS = [
+  { severity: "blocker" as const, kind: "absent" as const, title: "No pricing anywhere", detail: "d" },
+  { severity: "gap" as const, kind: "absent" as const, title: "No customer references", detail: "d" },
+]
+
+test("a re-run closes previous gaps the model names by exact title, matched case-insensitively", () => {
+  const result = groundAudit(
+    { claims: [], gaps: [{ title: "No churn data", severity: "gap", kind: "absent", detail: "" }], resolved: ["no PRICING anywhere"] },
+    MATERIALS,
+    PREVIOUS
+  )
+  assert.deepEqual(result.closed.map((gap) => gap.title), ["No pricing anywhere"])
+  assert.deepEqual(result.gaps.map((gap) => gap.title), ["No churn data"])
+})
+
+test("a resolved gap the model also lists as open is closed, not open", () => {
+  const result = groundAudit(
+    { claims: [], gaps: [{ title: "No pricing anywhere", severity: "blocker", kind: "absent", detail: "" }], resolved: ["No pricing anywhere"] },
+    MATERIALS,
+    PREVIOUS
+  )
+  assert.equal(result.closed.length, 1)
+  assert.equal(result.gaps.length, 0)
+})
+
+test("titles the model invents, junk entries, and a first run close nothing", () => {
+  assert.equal(groundAudit({ resolved: ["Made up", 3, null] }, MATERIALS, PREVIOUS).closed.length, 0)
+  assert.equal(groundAudit({ resolved: ["No pricing anywhere"] }, MATERIALS).closed.length, 0)
+  assert.equal(groundAudit({ resolved: "No pricing anywhere" }, MATERIALS, PREVIOUS).closed.length, 0)
+})
+
+test("the resolved task and contract exist only when there are previous gaps", () => {
+  assert.equal(previousGapsTask([]), "")
+  assert.equal(previousGapsTask(undefined), "")
+  assert.equal(resolvedContract([]), "")
+  const task = previousGapsTask(PREVIOUS)
+  assert.match(task, /TASK 3/)
+  assert.match(task, /- No pricing anywhere/)
+  assert.match(task, /copied exactly/)
+  assert.match(resolvedContract(PREVIOUS), /"resolved"/)
 })

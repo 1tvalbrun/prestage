@@ -1,5 +1,5 @@
 import { BUYER_PERSONAS } from "./personas.ts"
-import type { DomainPack } from "../types.ts"
+import { firstNameOf, type DomainPack } from "../types.ts"
 import { buildRoomBriefing, turnTaking } from "./briefing.ts"
 import { analyzeSystem, analyzeUser, audit, debrief, extractScope, orchestrate } from "./prompts.ts"
 import {
@@ -46,6 +46,11 @@ export const salesPack: DomainPack = {
   prep: {
     kind: "audit",
     stepLabel: "Pre-read",
+    // Only the pitch meeting has prep, and it locks the buyer.
+    start: {
+      label: "Run the pre-read",
+      hint: `${firstNameOf(BUYER_PERSONAS[0].name)} reads everything before the first question.`,
+    },
     prompt: audit,
     wait: {
       kicker: "The audit · before the buyer pushes",

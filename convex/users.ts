@@ -1,6 +1,7 @@
 import { v } from "convex/values"
 import { mutation, query } from "./_generated/server"
 import { requireIdentity } from "./guard"
+import { releaseFile } from "./materials"
 import { isPackId } from "../src/domains/registry"
 import { TERMS_VERSION } from "../src/lib/legal"
 
@@ -82,7 +83,7 @@ export const deleteAccount = mutation({
         .withIndex("by_practice", (q) => q.eq("practiceId", practice._id))
         .collect()
       for (const material of materials) {
-        await ctx.storage.delete(material.storageId)
+        if (material.storageId) await releaseFile(ctx, material.storageId)
         await ctx.db.delete(material._id)
       }
       await ctx.db.delete(practice._id)

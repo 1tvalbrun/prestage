@@ -164,6 +164,11 @@ export default defineSchema({
         status: v.union(v.literal("running"), v.literal("ready"), v.literal("failed")),
         claims: v.array(claimValidator),
         gaps: v.array(gapValidator),
+        // Previous gaps the latest materials resolved (a re-run only).
+        closed: v.optional(v.array(gapValidator)),
+        // When the current run claimed its slot; a run that never reports
+        // is re-claimable after the TTL (practices.claimAudit).
+        claimedAt: v.optional(v.number()),
         failureReason: v.optional(v.string()),
       })
     ),
@@ -296,10 +301,12 @@ export default defineSchema({
 
   // Extracted text from intake materials, keyed to a practice. Text is
   // consumed by the audit pipeline server-side and never listed back to the
-  // client wholesale (this is not a data room).
+  // client wholesale (this is not a data room). The uploaded file itself is
+  // deleted the moment extraction settles: only the text is retained.
   materials: defineTable({
     practiceId: v.id("practices"),
-    storageId: v.id("_storage"),
+    // Present only while extraction is pending.
+    storageId: v.optional(v.id("_storage")),
     name: v.string(),
     fileType: v.union(
       v.literal("pdf"),

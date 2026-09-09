@@ -8,7 +8,8 @@ import { lockedPersona } from "@/domains/registry"
 import { scopeText } from "@/domains/types"
 import { BTN_PRIMARY } from "@/components/shared/buttons"
 import { ScopeFields, FIELD_INPUT } from "./ScopeFields"
-import { ctaHint, missingRequired } from "./TypedForm"
+import { missingRequired } from "./TypedForm"
+import { confirmLabel, intakeCta } from "@/lib/intakeCta"
 import { UploadList, useMaterialUploads } from "./materialUploads"
 import { firstNameOf } from "@/domains/types"
 
@@ -43,6 +44,7 @@ export const ConfirmBrief = ({
   const [missing, setMissing] = useState<string[]>([])
 
   const panelist = lockedPersona(pack, variant)
+  const cta = intakeCta(pack, variant, panelist)
   // The chooser already answered the variant field; confirming it again
   // reads as a second question.
   const fields = variant.scopeFields.filter((field) => field.key !== pack.variantField)
@@ -194,14 +196,10 @@ export const ConfirmBrief = ({
           disabled={submitting || uploads.isUploading}
           className={cn(BTN_PRIMARY, "flex-none max-md:justify-center")}
         >
-          {submitting
-            ? "Setting up"
-            : panelist
-              ? `Looks right, meet ${firstNameOf(panelist.name)}`
-              : "Looks right, choose your panel"}
+          {submitting ? "Setting up" : confirmLabel(cta)}
           <ArrowRight className="size-3.5" />
         </button>
-        <span className="text-[12.5px] text-on-surface-3">{ctaHint(panelist, variant.prep)}</span>
+        <span className="text-[12.5px] text-on-surface-3">{cta.hint}</span>
       </div>
     </div>
   )
