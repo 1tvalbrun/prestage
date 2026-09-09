@@ -6,6 +6,13 @@ export const MAX_MATERIAL_BYTES = 10 * 1024 * 1024
 
 // Cap stored text so downstream prompts stay bounded.
 export const MAX_EXTRACTED_CHARS = 80_000
+// Materials accumulate on a practice (the gap map's "add and re-run"), and
+// the audit reads every one on each run within a fixed prompt budget: ten
+// keeps each file's share large enough to audit.
+export const MAX_MATERIALS_PER_PRACTICE = 10
+
+export const materialsRemaining = (existing: number): number =>
+  Math.max(0, MAX_MATERIALS_PER_PRACTICE - existing)
 
 export const materialFileType = (fileName: string): MaterialFileType | null => {
   const ext = fileName.slice(fileName.lastIndexOf(".") + 1).toLowerCase()

@@ -1,6 +1,8 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import {
+  MAX_MATERIALS_PER_PRACTICE,
+  materialsRemaining,
   MAX_MATERIAL_BYTES,
   clampExtractedText,
   materialFileType,
@@ -38,4 +40,11 @@ test("extracted text is clamped with a truncation marker", () => {
   assert.ok(clamped.length < long.length)
   assert.ok(clamped.endsWith("[truncated]"))
   assert.equal(clampExtractedText("short"), "short")
+})
+
+test("the per-practice cap counts what is already attached and never goes negative", () => {
+  assert.equal(materialsRemaining(0), MAX_MATERIALS_PER_PRACTICE)
+  assert.equal(materialsRemaining(MAX_MATERIALS_PER_PRACTICE - 1), 1)
+  assert.equal(materialsRemaining(MAX_MATERIALS_PER_PRACTICE), 0)
+  assert.equal(materialsRemaining(MAX_MATERIALS_PER_PRACTICE + 5), 0)
 })

@@ -7,18 +7,20 @@ import {
   mutation,
   query,
   type ActionCtx,
+  type MutationCtx,
 } from "./_generated/server"
 import { api, internal } from "./_generated/api"
 import type { Doc, Id } from "./_generated/dataModel"
 import { claimValidator, gapValidator, groundAudit } from "../src/lib/audit"
 import type { Blueprint } from "../src/lib/blueprint"
-import { materialFileType, validateMaterialFile } from "../src/lib/materials"
+import { materialFileType, materialsRemaining, validateMaterialFile } from "../src/lib/materials"
 import { DECK_EXTRACTION_CAUTION, parseExtractedScope } from "../src/lib/intake"
 import { createOpenAI, modelSettings } from "../src/lib/openai"
 import { getPack, isPackId, variantOf } from "../src/domains/registry"
 import { scopeText, type Scope } from "../src/domains/types"
 import { priorityValidator } from "./schema"
 import { insertSessionForPersona } from "./sessions"
+import { releaseFile } from "./materials"
 import { ownedOrNull, requireIdentity } from "./guard"
 import { recordUsage } from "./usage"
 
@@ -28,20 +30,47 @@ const TEXT_FALLBACK_CHARS = 60
 const MAX_OPEN_ITEMS = 10
 const MAX_TOTAL_ITEMS = 30
 const AUDIT_PROMPT_CHAR_BUDGET = 60_000
+// A quality-tier audit measures well under a minute; a "running" claim
+// older than this belongs to a run that never reported.
+const AUDIT_CLAIM_TTL_MS = 3 * 60_000
+
+const uploadValidator = v.object({
+  storageId: v.id("_storage"),
+  name: v.string(),
+  size: v.number(),
+})
+
+// Inserts each upload as a material and schedules its extraction. Shared
+// by create and attachMaterials, so the validation is the same on both
+// paths: the client validates before uploading, and anything invalid here
+// is a bypass, rejected loudly rather than ingested.
+const insertMaterials = async (
+  ctx: MutationCtx,
+  practiceId: Id<"practices">,
+  uploads: { storageId: Id<"_storage">; name: string; size: number }[]
+) => {
+  for (const upload of uploads) {
+    const fileType = materialFileType(upload.name)
+    if (fileType === null || validateMaterialFile(upload.name, upload.size) !== null) {
+      throw new Error(`Unsupported material: ${upload.name}`)
+    }
+    const materialId = await ctx.db.insert("materials", {
+      practiceId,
+      storageId: upload.storageId,
+      name: upload.name,
+      fileType,
+      size: upload.size,
+      status: "extracting",
+    })
+    await ctx.scheduler.runAfter(0, internal.ingest.extract, { materialId })
+  }
+}
 
 export const create = mutation({
   args: {
     packId: v.string(),
     scope: v.record(v.string(), v.union(v.string(), v.array(v.string()))),
-    materials: v.optional(
-      v.array(
-        v.object({
-          storageId: v.id("_storage"),
-          name: v.string(),
-          size: v.number(),
-        })
-      )
-    ),
+    materials: v.optional(v.array(uploadValidator)),
   },
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
@@ -85,9 +114,11 @@ export const create = mutation({
     // A practice without prep is ready the moment it exists: no read, no
     // audit, and nothing to schedule. It also takes no materials; the form
     // never offers them, so any here is a bypass.
-    if (!variant.prep && (args.materials ?? []).length > 0) {
+    const uploads = args.materials ?? []
+    if (!variant.prep && uploads.length > 0) {
       throw new Error("This practice takes no materials")
     }
+    if (materialsRemaining(0) < uploads.length) throw new Error("Too many materials")
 
     // Every create is a new thread on purpose — "CourtTime · gym pilot" and
     // "CourtTime · school district" are different practices even when the
@@ -101,29 +132,13 @@ export const create = mutation({
     })
     if (!variant.prep) return practiceId
 
-    for (const upload of args.materials ?? []) {
-      // The client validates before uploading; anything invalid here is a
-      // bypass, so reject loudly rather than ingest it.
-      const fileType = materialFileType(upload.name)
-      if (fileType === null || validateMaterialFile(upload.name, upload.size) !== null) {
-        throw new Error(`Unsupported material: ${upload.name}`)
-      }
-      const materialId = await ctx.db.insert("materials", {
-        practiceId,
-        storageId: upload.storageId,
-        name: upload.name,
-        fileType,
-        size: upload.size,
-        status: "extracting",
-      })
-      await ctx.scheduler.runAfter(0, internal.ingest.extract, { materialId })
-    }
+    await insertMaterials(ctx, practiceId, uploads)
 
     // No materials means nothing triggers the prep stage until the user
     // reaches its page — start it now so it runs while they confirm and
     // read. (With materials, ingest.extract schedules it when the last one
     // settles; the claim mutations collapse any double trigger.)
-    if ((args.materials ?? []).length === 0) {
+    if (uploads.length === 0) {
       await ctx.scheduler.runAfter(
         0,
         pack.prep.kind === "blueprint"
@@ -134,6 +149,35 @@ export const create = mutation({
     }
 
     return practiceId
+  },
+})
+
+// The gap map's "add and re-run": new materials join the practice, and
+// their last extraction re-runs the audit (ingest.extract). Add-only, and
+// the only client path that re-runs a ready audit, so the cap bounds what a
+// practice can spend on audits over its life.
+export const attachMaterials = mutation({
+  args: { practiceId: v.id("practices"), uploads: v.array(uploadValidator) },
+  handler: async (ctx, args) => {
+    const identity = await requireIdentity(ctx)
+    const practice = ownedOrNull(identity, await ctx.db.get(args.practiceId))
+    if (!practice) throw new Error("Practice not found")
+    const pack = getPack(practice.packId)
+    if (pack.prep.kind !== "audit" || !variantOf(pack, practice.scope).prep) {
+      throw new Error("This practice takes no materials")
+    }
+    if (!practice.audit || practice.audit.status === "running") {
+      throw new Error("The audit is still running")
+    }
+    if (args.uploads.length === 0) throw new Error("Nothing to add")
+    const existing = await ctx.db
+      .query("materials")
+      .withIndex("by_practice", (q) => q.eq("practiceId", args.practiceId))
+      .collect()
+    if (materialsRemaining(existing.length) < args.uploads.length) {
+      throw new Error("Too many materials")
+    }
+    await insertMaterials(ctx, args.practiceId, args.uploads)
   },
 })
 
@@ -320,7 +364,7 @@ export const remove = mutation({
       .withIndex("by_practice", (q) => q.eq("practiceId", args.id))
       .collect()
     for (const material of materials) {
-      await ctx.storage.delete(material.storageId)
+      if (material.storageId) await releaseFile(ctx, material.storageId)
       await ctx.db.delete(material._id)
     }
     await ctx.db.delete(args.id)
@@ -521,18 +565,20 @@ export const claimAudit = internalMutation({
     const practice = await ctx.db.get(args.id)
     if (!practice) return false
     const existing = practice.audit
+    const now = Date.now()
     if (existing) {
-      if (existing.status === "running") return false
+      const stale = existing.claimedAt === undefined || now - existing.claimedAt >= AUDIT_CLAIM_TTL_MS
+      if (existing.status === "running" && !stale) return false
       if (existing.status === "ready" && !args.force) return false
       // Keep the previous claims and gaps until the new outcome lands: a
       // forced re-run that fails must not have destroyed the last good map.
       await ctx.db.patch(args.id, {
-        audit: { ...existing, status: "running", failureReason: undefined },
+        audit: { ...existing, status: "running", claimedAt: now, failureReason: undefined },
       })
       return true
     }
     await ctx.db.patch(args.id, {
-      audit: { status: "running", claims: [], gaps: [] },
+      audit: { status: "running", claims: [], gaps: [], claimedAt: now },
     })
     return true
   },
@@ -554,6 +600,8 @@ export const auditInputs = internalQuery({
           : []
       ),
       unreadableCount: materials.filter((material) => material.status === "failed").length,
+      // A re-run's previous gaps, kept on the document through the claim.
+      previousGaps: practice?.audit?.gaps ?? [],
     }
   },
 })
@@ -576,6 +624,7 @@ export const setAuditOutcome = internalMutation({
         status: v.literal("ready"),
         claims: v.array(claimValidator),
         gaps: v.array(gapValidator),
+        closed: v.array(gapValidator),
       }),
       v.object({ status: v.literal("failed"), failureReason: v.string() })
     ),
@@ -583,15 +632,21 @@ export const setAuditOutcome = internalMutation({
   handler: async (ctx, args) => {
     const practice = await ctx.db.get(args.id)
     if (!practice) return
-    const previous = practice.audit ?? { claims: [], gaps: [] }
+    const previous = practice.audit ?? { claims: [], gaps: [], closed: undefined }
     await ctx.db.patch(args.id, {
       audit:
         args.outcome.status === "ready"
-          ? { status: "ready", claims: args.outcome.claims, gaps: args.outcome.gaps }
+          ? {
+              status: "ready",
+              claims: args.outcome.claims,
+              gaps: args.outcome.gaps,
+              ...(args.outcome.closed.length > 0 ? { closed: args.outcome.closed } : {}),
+            }
           : {
               status: "failed",
               claims: previous.claims,
               gaps: previous.gaps,
+              ...(previous.closed ? { closed: previous.closed } : {}),
               failureReason: args.outcome.failureReason,
             },
     })
@@ -626,7 +681,7 @@ const generateAudit = async (
     })
 
   try {
-    const { practice, readable, unreadableCount } = await ctx.runQuery(
+    const { practice, readable, unreadableCount, previousGaps } = await ctx.runQuery(
       internal.practices.auditInputs,
       { id: args.id }
     )
@@ -665,6 +720,7 @@ const generateAudit = async (
             scope: practice.scope,
             unreadableCount,
             materialSections,
+            previousGaps,
           }),
         },
       ],
@@ -686,10 +742,10 @@ const generateAudit = async (
       return
     }
 
-    const { claims, gaps } = groundAudit(JSON.parse(content), readable)
+    const { claims, gaps, closed } = groundAudit(JSON.parse(content), readable, previousGaps)
     await ctx.runMutation(internal.practices.setAuditOutcome, {
       id: args.id,
-      outcome: { status: "ready", claims, gaps },
+      outcome: { status: "ready", claims, gaps, closed },
     })
   } catch (error) {
     // Fixed message only: failureReason is client-readable, and provider

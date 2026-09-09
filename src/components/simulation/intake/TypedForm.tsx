@@ -5,26 +5,16 @@ import { ArrowRight, Upload } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useAction } from "convex/react"
 import { api } from "@convex/_generated/api"
-import type { DomainPack, Persona, PracticeVariant, Scope, ScopeField } from "@/domains/types"
+import type { DomainPack, PracticeVariant, Scope, ScopeField } from "@/domains/types"
 import { lockedPersona } from "@/domains/registry"
 import type { IntakeFormAction, IntakeFormState } from "@/lib/intakeForm"
+import { intakeCta } from "@/lib/intakeCta"
 import { BTN_PRIMARY } from "@/components/shared/buttons"
 import { ScopeFields } from "./ScopeFields"
 import { BriefPreview, EvidenceRail } from "./BriefPreview"
 import { UploadList, useMaterialUploads } from "./materialUploads"
 import { useAutoHideScrollbar } from "@/components/shared/useAutoHideScrollbar"
 import { firstNameOf } from "@/domains/types"
-
-export const ctaLabel = (panelist: Persona | null): string =>
-  panelist ? `Meet ${firstNameOf(panelist.name)}` : "Choose your panel"
-
-export const ctaHint = (panelist: Persona | null, prep: boolean): string => {
-  if (!panelist) return "Three panelists. We'll recommend who to face first."
-  const first = firstNameOf(panelist.name)
-  return prep
-    ? `${first} reads everything before the first question.`
-    : `${first} knows nothing about you until you speak.`
-}
 
 export const missingRequired = (fields: ScopeField[], scope: Scope): string[] =>
   fields
@@ -84,6 +74,7 @@ export const TypedForm = ({
   const formScroll = useAutoHideScrollbar<HTMLDivElement>()
   const railScroll = useAutoHideScrollbar<HTMLElement>()
   const panelist = lockedPersona(pack, variant)
+  const cta = intakeCta(pack, variant, panelist)
   const fieldsByKey = new Map(variant.scopeFields.map((field) => [field.key, field]))
 
   // Autofill synchronizes with the upload transport: each upload that
@@ -242,10 +233,10 @@ export const TypedForm = ({
               disabled={submitting || uploads.isUploading}
               className={cn(BTN_PRIMARY, "flex-none max-md:justify-center")}
             >
-              {submitting ? "Setting up" : ctaLabel(panelist)}
+              {submitting ? "Setting up" : cta.label}
               <ArrowRight className="size-3.5" />
             </button>
-            <span className="text-[12.5px] text-on-surface-3">{ctaHint(panelist, variant.prep)}</span>
+            <span className="text-[12.5px] text-on-surface-3">{cta.hint}</span>
           </div>
         </div>
 

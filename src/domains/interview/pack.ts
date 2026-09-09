@@ -113,6 +113,10 @@ export const interviewPack: DomainPack = {
   prep: {
     kind: "blueprint",
     stepLabel: "Blueprint",
+    start: {
+      label: "Build the blueprint",
+      hint: "Your interviewer plans the interview first and may have questions for you.",
+    },
     prompt: blueprint,
     refine: refineBlueprint,
     wait: {

@@ -161,6 +161,9 @@ export type AuditPromptInput = {
   scope: Scope
   unreadableCount: number
   materialSections: string
+  // A re-run's previous gaps, for the model to mark resolved. Absent or
+  // empty on a first run.
+  previousGaps?: Gap[]
 }
 
 export type OrchestratePromptInput = {
@@ -229,9 +232,14 @@ export type PrepStageCopy = {
   cta: string
 }
 
+// The brief's submit button and its hint: the button names the beat it
+// starts (the read), the hint says who reads and when the user meets them.
+export type PrepStartCopy = { label: string; hint: string }
+
 export type AuditPrep = {
   kind: "audit"
   stepLabel: string
+  start: PrepStartCopy
   prompt: (input: AuditPromptInput) => string
   wait: StageWaitCopy
   copy: PrepStageCopy & { zeroClaims: string }
@@ -240,6 +248,7 @@ export type AuditPrep = {
 export type BlueprintPrep = {
   kind: "blueprint"
   stepLabel: string
+  start: PrepStartCopy
   prompt: (input: BlueprintPromptInput) => string
   refine: (input: BlueprintRefineInput) => string
   wait: StageWaitCopy

@@ -146,3 +146,16 @@ test("debrief compounds the engagement memory and forbids repeating tracked comm
   assert.match(prompt, /UPDATE the previous summary rather than writing a fresh one/)
   assert.match(prompt, /never repeat or rephrase a commitment already tracked/)
 })
+
+test("a re-run's audit carries the previous gaps and the resolved contract; a first run does not", () => {
+  const previousGaps = [
+    { severity: "blocker" as const, kind: "absent" as const, title: "No pricing anywhere", detail: "d" },
+  ]
+  const rerun = audit({ scope, unreadableCount: 0, materialSections: "x", previousGaps })
+  assert.match(rerun, /TASK 3 — RESOLVED/)
+  assert.match(rerun, /- No pricing anywhere/)
+  assert.match(rerun, /"resolved":\["exact title"\]/)
+  const first = audit({ scope, unreadableCount: 0, materialSections: "x" })
+  assert.doesNotMatch(first, /TASK 3/)
+  assert.doesNotMatch(first, /"resolved"/)
+})

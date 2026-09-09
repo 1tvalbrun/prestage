@@ -1,5 +1,5 @@
 import { ASSESSOR_PERSONAS } from "./personas.ts"
-import { scopeText, type DomainPack } from "../types.ts"
+import { firstNameOf, scopeText, type DomainPack } from "../types.ts"
 import { areaByLabel, CONTROL_AREAS } from "./catalog.ts"
 import { buildRoomBriefing, turnTaking } from "./briefing.ts"
 import { analyzeSystem, analyzeUser, audit, debrief, extractScope, orchestrate } from "./prompts.ts"
@@ -91,6 +91,10 @@ export const auditPack: DomainPack = {
   prep: {
     kind: "audit",
     stepLabel: "Pre-read",
+    start: {
+      label: "Run the pre-read",
+      hint: `${firstNameOf(ASSESSOR_PERSONAS[0].name)} reads everything before the first question.`,
+    },
     prompt: audit,
     wait: {
       kicker: "The pre-read · before the interview",

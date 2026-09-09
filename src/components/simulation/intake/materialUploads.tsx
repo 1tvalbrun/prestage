@@ -67,6 +67,8 @@ export const useMaterialUploads = (laneId: string) => {
   const removeUpload = (key: string) =>
     setAllUploads((prev) => prev.filter((entry) => entry.key !== key))
 
+  const clear = () => setAllUploads((prev) => prev.filter((entry) => entry.laneId !== laneId))
+
   const uploads = allUploads.filter((entry) => entry.laneId === laneId)
 
   const readyMaterials = uploads.flatMap((entry) =>
@@ -79,6 +81,7 @@ export const useMaterialUploads = (laneId: string) => {
     uploads,
     addFiles,
     removeUpload,
+    clear,
     readyMaterials,
     isUploading: uploads.some((entry) => entry.state === "uploading"),
   }
