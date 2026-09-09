@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Check, ChevronDown, Menu, Pin, Plus, Settings, Trash2, X } from "lucide-react"
+import { Archive, Check, ChevronDown, Menu, Pin, Plus, Settings, Trash2, X } from "lucide-react"
 import { UserButton } from "@clerk/nextjs"
 import { useMutation, useQuery } from "convex/react"
 import type { FunctionReturnType } from "convex/server"
@@ -21,6 +21,7 @@ import { LogoMark } from "@/components/shared/LogoMark"
 import { BrandName } from "@/components/shared/BrandName"
 import { useAutoHideScrollbar } from "@/components/shared/useAutoHideScrollbar"
 import { useClerkAppearance } from "@/components/shared/useClerkAppearance"
+import { useArchivePractice } from "@/components/shared/archivePractice"
 
 // Folded lanes are a view preference, not data — they live in the browser.
 // Safe to read in a state initializer: the rail never server-renders (the
@@ -57,12 +58,14 @@ const Thread = ({
   active,
   removing,
   onTogglePin,
+  onArchive,
   onDelete,
 }: {
   practice: PracticeRow
   active: boolean
   removing: boolean
   onTogglePin: () => void
+  onArchive: () => void
   onDelete: () => void
 }) => {
   const todos = `${practice.openItems} todo${practice.openItems === 1 ? "" : "s"}`
@@ -131,6 +134,14 @@ const Thread = ({
         </button>
         <button
           type="button"
+          onClick={onArchive}
+          aria-label={`Archive ${practice.name}`}
+          className="focus-ring grid size-6 flex-none place-items-center rounded-md text-ink-4 opacity-0 transition-opacity hover:bg-surface-2 hover:text-on-surface-2 focus-visible:opacity-100 group-hover/thread:opacity-100 pointer-coarse:opacity-100 max-md:size-9 max-md:opacity-100"
+        >
+          <Archive className="size-3" />
+        </button>
+        <button
+          type="button"
           onClick={onDelete}
           aria-label={`Delete ${practice.name}`}
           className="focus-ring grid size-6 flex-none place-items-center rounded-md text-ink-4 opacity-0 transition-opacity hover:bg-surface-2 hover:text-red-fg focus-visible:opacity-100 group-hover/thread:opacity-100 pointer-coarse:opacity-100 max-md:size-9 max-md:opacity-100"
@@ -153,6 +164,7 @@ const Lane = ({
   removing,
   onToggle,
   onTogglePin,
+  onArchive,
   onDelete,
 }: {
   packId: string
@@ -162,6 +174,7 @@ const Lane = ({
   removing: ReadonlySet<string>
   onToggle: () => void
   onTogglePin: (practice: PracticeRow) => void
+  onArchive: (practice: PracticeRow) => void
   onDelete: (practice: PracticeRow) => void
 }) => (
   <div className="mb-[18px]">
@@ -183,7 +196,7 @@ const Lane = ({
       <Link
         href={`/simulation/new?lane=${packId}`}
         aria-label={`New practice: ${getPack(packId).label}`}
-        className="focus-ring grid size-6 flex-none place-items-center rounded-md text-ink-4 opacity-0 transition-opacity hover:bg-surface-2 hover:text-on-surface-2 focus-visible:opacity-100 group-hover/lane:opacity-100 pointer-coarse:opacity-100"
+        className="focus-ring grid size-6 flex-none place-items-center rounded-md text-ink-4 opacity-0 transition-opacity hover:bg-surface-2 hover:text-on-surface-2 focus-visible:opacity-100 group-hover/lane:opacity-100 pointer-coarse:opacity-100 max-md:size-9 max-md:opacity-100"
       >
         <Plus className="size-3.5" />
       </Link>
@@ -216,6 +229,7 @@ const Lane = ({
                 active={pathname.startsWith(`/p/${practice.practiceId}`)}
                 removing={removing.has(practice.practiceId)}
                 onTogglePin={() => onTogglePin(practice)}
+                onArchive={() => onArchive(practice)}
                 onDelete={() => onDelete(practice)}
               />
             ))}
@@ -231,6 +245,8 @@ export const AppRail = () => {
   const router = useRouter()
   const user = useQuery(api.users.getCurrent)
   const practices = useQuery(api.practices.list)
+  const hasArchived = useQuery(api.practices.hasArchived)
+  const archivePractice = useArchivePractice()
   const clerkAppearance = useClerkAppearance()
   const railScroll = useAutoHideScrollbar<HTMLElement>()
   const setPinned = useMutation(api.practices.setPinned)
@@ -240,8 +256,8 @@ export const AppRail = () => {
   // blank the title mid exit animation.
   const [confirmTarget, setConfirmTarget] = useState<PracticeRow | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
-  // Threads mid delete animation: collapsing in the rail until the removal
-  // lands (the mutation fires when the collapse ends).
+  // Threads mid exit animation: collapsing in the rail until the removal
+  // fires (delete and archive both leave this way).
   const [removing, setRemoving] = useState<ReadonlySet<string>>(new Set())
   const [deleteFailed, setDeleteFailed] = useState(false)
   // Below md the rail is an off-canvas drawer behind the top bar's menu
@@ -267,31 +283,41 @@ export const AppRail = () => {
     setConfirmOpen(true)
   }
 
+  // Collapses the row, then runs the removal; the optimistic update takes
+  // the row out of the list the moment the mutation is called, so the set
+  // is cleared right after and a rejected mutation grows the row back.
+  const collapseThen = (practiceId: string, run: () => void) => {
+    setRemoving((prev) => new Set(prev).add(practiceId))
+    window.setTimeout(
+      () => {
+        run()
+        setRemoving((prev) => {
+          const next = new Set(prev)
+          next.delete(practiceId)
+          return next
+        })
+      },
+      prefersReducedMotion() ? 0 : EXIT_MS
+    )
+  }
+
   const handleConfirmDelete = () => {
     if (!confirmTarget) return
     const { practiceId } = confirmTarget
     setConfirmOpen(false)
     setDeleteFailed(false)
-    setRemoving((prev) => new Set(prev).add(practiceId))
-    window.setTimeout(
-      () => {
-        removePractice({ id: practiceId })
-          .then(() => {
-            if (window.location.pathname.startsWith(`/p/${practiceId}`)) router.push("/")
-          })
-          .catch(() => setDeleteFailed(true))
-          .finally(() =>
-            setRemoving((prev) => {
-              const next = new Set(prev)
-              next.delete(practiceId)
-              return next
-            })
-          )
-        focusNewPractice()
-      },
-      prefersReducedMotion() ? 0 : EXIT_MS
-    )
+    collapseThen(practiceId, () => {
+      removePractice({ id: practiceId })
+        .then(() => {
+          if (window.location.pathname.startsWith(`/p/${practiceId}`)) router.push("/")
+        })
+        .catch(() => setDeleteFailed(true))
+      focusNewPractice()
+    })
   }
+
+  const handleArchive = (practice: PracticeRow) =>
+    collapseThen(practice.practiceId, () => archivePractice(practice))
 
   // Navigating away is the drawer's natural close: every link inside it
   // leads somewhere, and a drawer left open over the new page reads as
@@ -410,10 +436,27 @@ export const AppRail = () => {
               setPinned({ id: practice.practiceId, pinned: !practice.pinned })
             }
             removing={removing}
+            onArchive={handleArchive}
             onDelete={handleRequestDelete}
           />
         ))}
       </nav>
+
+      {hasArchived && (
+        <Link
+          href="/archived"
+          aria-current={pathname === "/archived" ? "page" : undefined}
+          className={cn(
+            "focus-ring mt-1 flex items-center gap-2 rounded-[9px] border px-2.5 py-[7px] text-[12.5px] transition-colors",
+            pathname === "/archived"
+              ? "border-line bg-surface-raised font-medium text-on-surface shadow-btn"
+              : "border-transparent text-on-surface-3 hover:bg-surface-2"
+          )}
+        >
+          <Archive className="size-3.5" />
+          Archived
+        </Link>
+      )}
 
       {deleteFailed && <DeletePracticeError className="px-2.5 py-1.5" />}
 

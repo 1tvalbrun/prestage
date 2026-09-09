@@ -262,7 +262,7 @@ export const list = query({
     const identity = await requireIdentity(ctx)
     const practices = await ctx.db
       .query("practices")
-      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject).eq("archivedAt", undefined))
       .collect()
     const rows = await Promise.all(
       practices.map(async (practice) => {
@@ -332,6 +332,52 @@ export const backfillRollups = internalMutation({
           : {}),
       })
     }
+  },
+})
+
+// The archived page's rows: slim on purpose, and every archived practice
+// at once. The count is bounded by one user's own activity.
+export const listArchived = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await requireIdentity(ctx)
+    const practices = await ctx.db
+      .query("practices")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject).gt("archivedAt", 0))
+      .order("desc")
+      .collect()
+    return practices.map((practice) => ({
+      practiceId: practice._id,
+      name: practice.name,
+      packId: practice.packId,
+      sessionCount: practice.sessionCount ?? 0,
+      lastSessionAt: practice.lastSessionAt ?? null,
+      archivedAt: practice.archivedAt ?? 0,
+    }))
+  },
+})
+
+// The sidebar's "Archived" row shows only once something is archived. One
+// document read, not the list: the rail runs on every page.
+export const hasArchived = query({
+  args: {},
+  handler: async (ctx) => {
+    const identity = await requireIdentity(ctx)
+    const first = await ctx.db
+      .query("practices")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject).gt("archivedAt", 0))
+      .first()
+    return first !== null
+  },
+})
+
+export const setArchived = mutation({
+  args: { id: v.id("practices"), archived: v.boolean() },
+  handler: async (ctx, args) => {
+    const identity = await requireIdentity(ctx)
+    const practice = ownedOrNull(identity, await ctx.db.get(args.id))
+    if (!practice) throw new Error("Practice not found")
+    await ctx.db.patch(args.id, { archivedAt: args.archived ? Date.now() : undefined })
   },
 })
 

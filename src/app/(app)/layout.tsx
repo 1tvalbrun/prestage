@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
 import { AppRail } from "@/components/layout/AppRail"
+import { ArchiveProvider } from "@/components/shared/archivePractice"
 
 // The shell is just the rail plus a scrollable main — pages own their own
 // column (max-width, padding), per the mocks.
@@ -15,12 +16,14 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   }, [pathname])
 
   return (
-    <div className="flex h-dvh bg-surface max-md:flex-col">
-      <AppRail />
-      <main ref={mainRef} tabIndex={-1} className="min-w-0 flex-1 overflow-y-auto outline-none max-md:pb-[env(safe-area-inset-bottom)]">
-        {children}
-      </main>
-    </div>
+    <ArchiveProvider>
+      <div className="flex h-dvh bg-surface max-md:flex-col">
+        <AppRail />
+        <main ref={mainRef} tabIndex={-1} className="min-w-0 flex-1 overflow-y-auto outline-none max-md:pb-[env(safe-area-inset-bottom)]">
+          {children}
+        </main>
+      </div>
+    </ArchiveProvider>
   )
 }
 
