@@ -25,10 +25,11 @@ type Beat =
   | { kind: "extracting" }
   | { kind: "confirm"; heard: Scope; seconds: number }
 
-// Voice-first intake for every lane. ?lane= wins over the user's default;
-// ?from= prefills the typed form from an existing practice's scope (and
-// pins its lane) so adjusting a brief never means retyping it; with
-// &next=1 the prefill is the lane's suggested next practice instead.
+// Intake for every lane, typed first with a spoken brief one tap away.
+// ?lane= wins over the user's default; ?from= prefills the form from an
+// existing practice's scope (and pins its lane) so adjusting a brief never
+// means retyping it; with &next=1 the prefill is the lane's suggested next
+// practice instead.
 const NewPracticePage = ({
   searchParams,
 }: {
@@ -43,9 +44,7 @@ const NewPracticePage = ({
   const analyze = useAction(api.practices.analyze)
 
   const [chosenLane, setChosenLane] = useState<string | null>(null)
-  // A ?from= prefill goes straight to the typed form — the words already
-  // exist; re-speaking them helps no one.
-  const [beat, setBeat] = useState<Beat>(() => ({ kind: from ? "type" : "tell" }))
+  const [beat, setBeat] = useState<Beat>({ kind: "type" })
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [extractFailed, setExtractFailed] = useState(false)
@@ -85,6 +84,16 @@ const NewPracticePage = ({
   const lanes = (user?.lanes ?? []).filter(isPackId)
   const prefilled = source !== null && source !== undefined
   const form = forms[pack.id] ?? initialFormState()
+  // Anything the user put in that leaving would lose: typed fields in any
+  // lane (a variant pick alone is one click to redo), files, or a spoken
+  // brief still being shaped or confirmed.
+  const dirty =
+    beat.kind === "extracting" ||
+    beat.kind === "confirm" ||
+    uploads.hasUploadsInAnyLane ||
+    Object.entries(forms).some(([lane, laneForm]) =>
+      [...laneForm.touched].some((key) => key !== getPack(lane).variantField)
+    )
   const variant = variantOf(pack, form.scope)
   const variantField = pack.variantField
     ? variant.scopeFields.find((field) => field.key === pack.variantField)
@@ -161,7 +170,22 @@ const NewPracticePage = ({
   }
 
   return (
-    <FlowShell stage="brief" packId={pack.id} scope={form.scope} fullBleed>
+    <FlowShell
+      stage="brief"
+      packId={pack.id}
+      scope={form.scope}
+      fullBleed
+      confirmExit={
+        dirty
+          ? {
+              title: "Leave without creating this practice?",
+              description:
+                "Nothing here is kept until the practice is created. What you typed and any documents you added will be gone.",
+              confirmLabel: "Leave",
+            }
+          : undefined
+      }
+    >
       <div className="flex h-full min-h-0 flex-col px-10 pt-7 max-md:px-5">
       {lanes.length > 1 && !prefilled && (
         <nav aria-label="Practice lane" className="mb-7 flex flex-none flex-wrap justify-center gap-2">

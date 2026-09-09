@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { LogOut } from "lucide-react"
+import { LogOut, X } from "lucide-react"
 import { useQuery } from "convex/react"
 import { api } from "@convex/_generated/api"
 import { Id } from "@convex/_generated/dataModel"
@@ -55,8 +55,8 @@ type FlowShellProps = {
   fullBleed?: boolean
   // The room renders the whole shell on the dark surface.
   dark?: boolean
-  // When leaving would interrupt something live, the exit action confirms
-  // first; label defaults to the wizard's "Save & exit".
+  // When leaving would lose something, the exit action confirms first;
+  // label defaults to the stage's exit label.
   confirmExit?: { title: string; description: string; label?: string; confirmLabel?: string }
   // The room's settle fades every piece of chrome, this header included —
   // opacity only, so the layout never collapses under the scene.
@@ -96,8 +96,15 @@ export const FlowShell = ({
     mainRef.current?.focus()
   }, [stage])
 
-  const exitClass =
-    "focus-ring rounded-lg px-2.5 py-1.5 text-[13px] text-on-surface-3 transition-colors hover:bg-surface-2 max-md:py-2.5"
+  // The only door out of the flow, so it reads as a button on every stage.
+  // Before the brief is submitted nothing exists to keep, so leaving is a
+  // cancel. From the read on, the practice is already saved as it goes.
+  const exitClass = cn(
+    BTN_SECONDARY,
+    "flex-none whitespace-nowrap px-3.5 py-2 text-[13px] hover:text-on-surface max-md:py-2.5"
+  )
+  const exitLabel = stage === "brief" ? "Cancel" : "Exit"
+  const ExitIcon = stage === "brief" ? X : LogOut
 
   return (
     <div
@@ -178,11 +185,9 @@ export const FlowShell = ({
 
         {confirmExit ? (
           <AlertDialog>
-            {/* A stateful exit earns a real button — plain text is too easy
-                to miss as the only door out of the room. */}
-            <AlertDialogTrigger className={cn(BTN_SECONDARY, "flex-none whitespace-nowrap px-3.5 py-2 text-[13px] hover:text-on-surface max-md:py-2.5")}>
-              <LogOut className="size-[14px]" />
-              {confirmExit.label ?? "Save & exit"}
+            <AlertDialogTrigger className={exitClass}>
+              <ExitIcon className="size-[14px]" />
+              {confirmExit.label ?? exitLabel}
             </AlertDialogTrigger>
             <AlertDialogContent size="sm" data-surface={dark ? "dark" : undefined}>
               <AlertDialogHeader>
@@ -192,14 +197,15 @@ export const FlowShell = ({
               <AlertDialogFooter>
                 <AlertDialogCancel>Stay</AlertDialogCancel>
                 <AlertDialogAction onClick={() => router.push("/")}>
-                  {confirmExit.confirmLabel ?? confirmExit.label ?? "Save & exit"}
+                  {confirmExit.confirmLabel ?? confirmExit.label ?? exitLabel}
                 </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
         ) : (
-          <Link href="/" className={cn(exitClass, "flex-none whitespace-nowrap")}>
-            Save &amp; exit
+          <Link href="/" className={exitClass}>
+            <ExitIcon className="size-[14px]" />
+            {exitLabel}
           </Link>
         )}
       </header>

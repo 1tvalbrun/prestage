@@ -84,6 +84,8 @@ export const useMaterialUploads = (laneId: string) => {
     clear,
     readyMaterials,
     isUploading: uploads.some((entry) => entry.state === "uploading"),
+    // Across every lane: leaving the intake drops all of them.
+    hasUploadsInAnyLane: allUploads.some((entry) => entry.state !== "rejected"),
   }
 }
 

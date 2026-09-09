@@ -148,6 +148,9 @@ export default defineSchema({
     personaId: v.optional(v.string()),
     // Pinned practices sort to the top of their lane.
     pinned: v.optional(v.boolean()),
+    // Set when the user archives the practice: out of the home page and
+    // the sidebar, everything kept, restorable. Absent means active.
+    archivedAt: v.optional(v.number()),
     status: v.union(v.literal("draft"), v.literal("shaping"), v.literal("ready")),
     // What the user brought in, keyed by the pack's scopeFields. Keys and
     // sizes are validated in practices.create against the pack.
@@ -191,7 +194,9 @@ export default defineSchema({
     // out-of-order guard (a retried older debrief must not overwrite the
     // newest session's verdict).
     lastVerdictSessionAt: v.optional(v.number()),
-  }).index("by_user", ["userId"]),
+    // userId alone serves the ownership reads; the second field lets the
+    // active list and the archived list each range past the other's rows.
+  }).index("by_user", ["userId", "archivedAt"]),
 
   // One live conversation with the practice's persona, debrief embedded —
   // a session without a debrief either is live or ended without a verdict.

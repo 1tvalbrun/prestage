@@ -261,7 +261,7 @@ export type BlueprintPrep = {
 export type PreviewRow = { key: string; label: string; hint: string }
 
 export type PackCopy = {
-  // The wizard's voice-first opening beat.
+  // The spoken brief, reached from the form's "Talk it instead".
   tellIt: { heading: string; sub: string }
   // Typed-form structure: fields grouped into titled sections, in order.
   form: {

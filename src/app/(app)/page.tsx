@@ -3,13 +3,14 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ChevronRight, Plus, Trash2, Video } from "lucide-react"
+import { Archive, ChevronRight, Search, Trash2, Video, X } from "lucide-react"
 import { useMutation, useQuery } from "convex/react"
 import { api } from "@convex/_generated/api"
 import type { Id } from "@convex/_generated/dataModel"
 import { cn, relativeDay } from "@/lib/utils"
+import { filterPractices } from "@/lib/findPractices"
 import { getPack, isPackId } from "@/domains/registry"
-import { BTN_PRIMARY } from "@/components/shared/buttons"
+import { BTN_PRIMARY, BTN_SECONDARY } from "@/components/shared/buttons"
 import { personaInitials } from "@/components/shared/PersonaAvatar"
 import { LaneBadge } from "@/components/shared/LaneBadge"
 import { PersonaAvatar } from "@/components/shared/PersonaAvatar"
@@ -19,7 +20,12 @@ import {
   useDeletePractice,
 } from "@/components/shared/DeletePracticeDialog"
 import { focusNewPractice, type PracticeRow } from "@/components/layout/AppRail"
+import { useArchivePractice } from "@/components/shared/archivePractice"
 import { firstNameOf } from "@/domains/types"
+
+// Three rows on a wide screen. The sidebar is the full list; the grid is
+// the recent page of it.
+const HOME_GRID_CAP = 9
 
 const greeting = (hour: number) =>
   hour < 5 ? "Good night" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"
@@ -94,7 +100,56 @@ const ResumeHero = ({ practice }: { practice: PracticeRow }) => {
   )
 }
 
-const PracticeCard = ({ practice, onDelete }: { practice: PracticeRow; onDelete: () => void }) => {
+// The intake's lane chips, with a count: a filter here, not a choice.
+const LaneChip = ({
+  label,
+  count,
+  active,
+  onClick,
+  dot,
+}: {
+  label: string
+  count: number
+  active: boolean
+  onClick: () => void
+  dot?: boolean
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    aria-pressed={active}
+    className={cn(
+      "focus-ring flex items-center gap-[7px] rounded-full border px-3.5 py-[7px] text-[12.5px] font-medium transition-colors max-md:py-2.5",
+      active
+        ? "border-accent-line bg-accent-bg text-accent-blue"
+        : "border-line-2 bg-surface-raised text-on-surface-2 hover:bg-surface-2"
+    )}
+  >
+    {dot && (
+      <span
+        aria-hidden="true"
+        className={cn("h-[7px] w-[7px] rounded-full", active ? "bg-accent-blue" : "bg-ink-4")}
+      />
+    )}
+    {label}
+    <span className={cn("font-mono text-[10.5px]", active ? "text-accent-blue/80" : "text-ink-4")}>
+      {count}
+    </span>
+  </button>
+)
+
+const CARD_CONTROL =
+  "focus-ring relative grid size-6 flex-none place-items-center rounded-md text-ink-4 opacity-0 transition-opacity hover:bg-surface-3 focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100 max-md:size-9 max-md:opacity-100"
+
+const PracticeCard = ({
+  practice,
+  onArchive,
+  onDelete,
+}: {
+  practice: PracticeRow
+  onArchive: () => void
+  onDelete: () => void
+}) => {
   const persona = personaFor(practice)
   const statusLine =
     practice.lastQuote ??
@@ -117,9 +172,17 @@ const PracticeCard = ({ practice, onDelete }: { practice: PracticeRow; onDelete:
         </span>
         <button
           type="button"
+          onClick={onArchive}
+          aria-label={`Archive ${practice.name}`}
+          className={cn(CARD_CONTROL, "hover:text-on-surface-2")}
+        >
+          <Archive className="size-3" />
+        </button>
+        <button
+          type="button"
           onClick={onDelete}
           aria-label={`Delete ${practice.name}`}
-          className="focus-ring relative grid size-6 flex-none place-items-center rounded-md text-ink-4 opacity-0 transition-opacity hover:bg-surface-3 hover:text-red-fg focus-visible:opacity-100 group-hover:opacity-100 pointer-coarse:opacity-100 max-md:size-9 max-md:opacity-100"
+          className={cn(CARD_CONTROL, "hover:text-red-fg")}
         >
           <Trash2 className="size-3" />
         </button>
@@ -226,11 +289,18 @@ const HomePage = () => {
   const user = useQuery(api.users.getCurrent)
   const practices = useQuery(api.practices.list)
   const removePractice = useDeletePractice()
+  const archivePractice = useArchivePractice()
   // The target outlives the dialog's open state: clearing it on close would
   // blank the title mid exit animation.
   const [confirmTarget, setConfirmTarget] = useState<PracticeRow | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [deleteFailed, setDeleteFailed] = useState(false)
+  const [showAll, setShowAll] = useState(false)
+  const [query, setQuery] = useState("")
+  const [lane, setLane] = useState<string | null>(null)
+
+  const handleToggleShowAll = () => setShowAll((prev) => !prev)
+  const handleClearQuery = () => setQuery("")
 
   const handleRequestDelete = (practice: PracticeRow) => {
     setConfirmTarget(practice)
@@ -249,6 +319,14 @@ const HomePage = () => {
 
   if (practices === undefined) return null
 
+  const finding = query.trim().length > 0 || lane !== null
+  const matches = filterPractices(practices, query, lane)
+  // Finding shows every match; the cap only trims the untouched list.
+  const shown = finding || showAll ? matches : matches.slice(0, HOME_GRID_CAP)
+  const laneCount = new Set(practices.map((practice) => practice.packId)).size
+  const countLine = finding
+    ? `${matches.length} of ${practices.length}${query.trim() ? " match" : ""}${lane ? ` · ${getPack(lane).label}` : ""}`
+    : `${practices.length} across ${laneCount} ${laneCount === 1 ? "lane" : "lanes"}`
   const resume =
     practices.find((practice) => practice.hasLive) ??
     practices.find((practice) => practice.openItems > 0) ??
@@ -298,32 +376,70 @@ const HomePage = () => {
           <h2 className="text-[11px] font-semibold uppercase tracking-[.09em] text-on-surface-3">
             Your practices
           </h2>
-          {practices.length > 0 && (
-            <p className="text-xs text-on-surface-3">
-              {practices.length} across {new Set(practices.map((p) => p.packId)).size}{" "}
-              {new Set(practices.map((p) => p.packId)).size === 1 ? "lane" : "lanes"}
-            </p>
-          )}
+          <p className="text-xs text-on-surface-3">{countLine}</p>
+        </div>
+        <div className="mb-4 flex flex-wrap items-center gap-2.5">
+          <label className="relative flex w-[320px] max-w-full items-center max-md:w-full">
+            <Search className="pointer-events-none absolute left-3 size-[15px] text-on-surface-3" />
+            <span className="sr-only">Find a practice</span>
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Find a practice"
+              className="focus-ring h-9 w-full rounded-xl border border-line bg-surface-raised pl-9 pr-8 text-[13.5px] shadow-card outline-none placeholder:text-ink-4 [&::-webkit-search-cancel-button]:hidden"
+            />
+            {query && (
+              <button
+                type="button"
+                onClick={handleClearQuery}
+                aria-label="Clear search"
+                className="focus-ring absolute right-2 grid size-6 place-items-center rounded-md text-on-surface-3 hover:text-on-surface"
+              >
+                <X className="size-3.5" />
+              </button>
+            )}
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <LaneChip label="All" count={practices.length} active={lane === null} onClick={() => setLane(null)} />
+            {lanes.map((laneId) => (
+              <LaneChip
+                key={laneId}
+                label={getPack(laneId).label}
+                count={practices.filter((practice) => practice.packId === laneId).length}
+                active={lane === laneId}
+                onClick={() => setLane(laneId)}
+                dot
+              />
+            ))}
+          </div>
         </div>
         {deleteFailed && <DeletePracticeError className="mb-3 px-0.5" />}
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3.5 max-md:grid-cols-1">
-          {practices.map((practice) => (
-            <PracticeCard
-              key={practice.practiceId as Id<"practices">}
-              practice={practice}
-              onDelete={() => handleRequestDelete(practice)}
-            />
-          ))}
-          <Link
-            href="/simulation/new"
-            className="col-span-full flex min-h-[130px] w-[min(360px,100%)] flex-col items-center justify-center justify-self-center gap-2.5 rounded-xl border border-dashed border-line-2 text-on-surface-3 transition hover:bg-surface-2 hover:text-on-surface-2"
-          >
-            <span className="grid h-9 w-9 place-items-center rounded-full border border-dashed border-line-2">
-              <Plus className="size-[15px]" />
-            </span>
-            <span className="text-[13px] font-medium">New practice</span>
-          </Link>
-        </div>
+        {matches.length === 0 ? (
+          <p className="px-0.5 py-6 text-[13.5px] text-on-surface-2">
+            {query.trim()
+              ? `No practice matches “${query.trim()}”.`
+              : `Nothing in ${lane ? getPack(lane).label : "this lane"} yet.`}
+          </p>
+        ) : (
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3.5 max-md:grid-cols-1">
+            {shown.map((practice) => (
+              <PracticeCard
+                key={practice.practiceId as Id<"practices">}
+                practice={practice}
+                onArchive={() => archivePractice(practice)}
+                onDelete={() => handleRequestDelete(practice)}
+              />
+            ))}
+          </div>
+        )}
+        {!finding && practices.length > HOME_GRID_CAP && (
+          <div className="mt-4 flex justify-center">
+            <button type="button" onClick={handleToggleShowAll} className={BTN_SECONDARY}>
+              {showAll ? "Show fewer" : `Show all ${practices.length}`}
+            </button>
+          </div>
+        )}
       </section>
 
       <DeletePracticeDialog
