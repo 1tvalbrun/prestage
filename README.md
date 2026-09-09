@@ -1,39 +1,32 @@
 # Prestage
 
-Pre-diligence for a startup idea, before a real investor runs it for you. A founder pitches out loud, an AI panel reads their deck, finds the gaps an investor will find, interrogates them live on the weakest one, and hands back a scored verdict with a fix list.
+The interview before the interview. You bring a pitch, a sale, an audit, or a job interview, and a live, photoreal counterpart reads your materials, finds what a real one would find, and pushes on it out loud. You leave with a debrief of what held, what did not, and what to fix before the real thing.
+
+## The lanes
+
+Four lanes, each a domain pack with its own intake, prep, personas, and debrief:
+
+- **Pitch a startup**: a VC, a target customer, or a technical architect. You choose who to face.
+- **Pitch a sale**: a pitch meeting with a buyer who has read your materials, or a two-minute cold call with a prospect who has not.
+- **Face an audit**: an assessor who reads your evidence against the controls in scope.
+- **Practice an interview**: an interviewer who builds a role-specific plan first and keeps the questions sealed until the room.
 
 ## How it works
 
-Six stages, each building on the last:
+1. **Brief**: type it or talk it. A spoken brief is transcribed and shaped into the lane's fields; only what you actually said fills in.
+2. **Read**: materials are extracted with page, slide, and sheet markers so every later claim can cite its source.
+3. **Pre-read** or **Blueprint**: the audit lanes separate what your materials support from what they only assert, and show the gap map. Add a document and the audit re-runs on the full set, marking the gaps it closed. The interview lane builds its plan and asks its clarifying questions.
+4. **Panel**: meet or choose your counterpart, and run a quick mic and noise check.
+5. **Room**: a live conversation with a Runway Character that hears you and pushes back in its own voice. It ends the way a real one does, when someone signs off, or when the time is up.
+6. **Debrief**: what held, what did not, and your to-dos, with the counterpart's spoken verdict. No scores.
 
-1. **Brief** the founder speaks or uploads a deck; the idea assembles itself from what they gave.
-2. **Read** materials are extracted with page, slide, and sheet markers so every later claim can cite its source.
-3. **Audit** the panel reads the materials and separates what is supported from what is only asserted.
-4. **Panel** the weakest axis is chosen, and the panelist who owns it is picked to run the room.
-5. **Room** a live, photoreal investor interrogates the founder out loud on that weakness.
-6. **Verdict** a scored readout with the panelist's spoken verdict, the risks, and a seven-day fix list.
+## The grounding rule
 
-## The Runway integration
-
-The live interrogator is a **Runway Character**: a realtime, photoreal avatar that hears the founder speak and pushes back in the moment, in its own voice. The founder is across the table from an investor, not a chat box.
-
-The verdict is delivered by that same investor: the delivering panelist's one-line spoken verdict is quoted over a composed three-person panel tableau with their seat lit, so the verdict comes from the same face that ran the interrogation.
-
-If you build on the avatars SDK, [docs/runway-avatar-findings.md](docs/runway-avatar-findings.md) collects a few non-obvious behaviors we hit, each with a source citation and the workaround.
-
-## The grounding architecture
-
-The core of this repo is a rule the product enforces on itself: it does not make things up.
-
-A finding cannot exist without evidence, and that rule lives in the type, not in a prompt. A `Claim` is a value that carries a `citation`; there is no shape for a claim without one, so an ungrounded assertion cannot be constructed in the first place, only demoted to a flagged gap. The report's "held up" findings work the same way: `groundHeldUp` keeps a finding only if its quote appears verbatim in the founder's actual speech (normalized for case and punctuation, never for paraphrase). Intake fills only the fields it actually heard and flags the rest.
-
-The pattern is "make invalid states unrepresentable," applied to model output. Fabrication is not discouraged with instructions; it is unrepresentable in the data model. A founder who said nothing defensible gets a report that says nothing held up, honestly, rather than an invented compliment.
-
-The same discipline shapes the live experience. The founder's speech was transcribed in six-second batches; it now streams word by word, browser-direct through AssemblyAI, so the panel reacts to what is being said as it is said.
+The product does not make things up, and that rule lives in the types, not in a prompt. A `Claim` carries a `citation`; there is no shape for a claim without one, so an ungrounded assertion cannot be constructed, only demoted to a gap. Intake fills only the fields it heard and flags the rest. A brief that says nothing defensible gets a gap map that says so, rather than an invented compliment.
 
 ## Stack
 
-Next.js and Convex (database, server functions, realtime), Runway (Characters), AssemblyAI streaming transcription, OpenAI for orchestration and the written report.
+Next.js and Convex (database, server functions, realtime, crons), Clerk (auth), Runway Characters (`@runwayml/avatars-react`), AssemblyAI streaming transcription, OpenAI for the read, the audit, the room's orchestration, and the debrief.
 
 ## Setup
 
@@ -45,16 +38,36 @@ pnpm dev              # http://localhost:3000
 
 In `.env.local` (read by the Next server and the client build):
 
-- `RUNWAYML_API_SECRET`, `OPENAI_API_KEY`, `ASSEMBLYAI_API_KEY`
-- `NEXT_PUBLIC_RUNWAY_AVATAR_VC`, `NEXT_PUBLIC_RUNWAY_AVATAR_CUSTOMER`, `NEXT_PUBLIC_RUNWAY_AVATAR_TECH` (the three avatar ids)
-- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in` (Clerk auth)
+- `RUNWAYML_API_SECRET`, `ASSEMBLYAI_API_KEY`
+- `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in`
 
-In the Convex deployment, set with `npx convex env set NAME value` (read by Convex actions):
+In the Convex deployment, set with `npx convex env set NAME value` (read by Convex actions, which never see `.env.local`):
 
 - `RUNWAYML_API_SECRET`, `OPENAI_API_KEY`
 - `CLERK_JWT_ISSUER_DOMAIN`: the Clerk instance's issuer URL (`https://….clerk.accounts.dev`). Convex validates the session JWT against it; also create a JWT template named `convex` in the Clerk dashboard.
-- `OPENAI_MODEL_FAST`, `OPENAI_MODEL_QUALITY` (optional): model overrides, defaulting to `gpt-4o-mini`. Convex actions read the deployment env, not `.env.local` — a model set only locally never reaches them.
+- `OPENAI_MODEL_FAST`, `OPENAI_MODEL_QUALITY` (optional): model overrides, defaulting to `gpt-4o-mini`.
 
 `npx convex dev` writes `NEXT_PUBLIC_CONVEX_URL` for you.
 
-Auth is Clerk, invite-only: sign-up is Restricted in the Clerk dashboard, and testers are added under Users → Invitations. Sign-in is Google or an email code at `/sign-in`. Every page, API route, and public Convex function requires a session, and each user sees only their own ideas, sessions, and verdicts.
+Avatars are registered per persona, on each deployment, from the CLI (add `--prod` for production):
+
+```bash
+npx convex run avatars:register '{"packId":"founder","personaId":"vc-01","runwayAvatarId":"…"}'
+```
+
+The connect route only mints sessions for registered avatars.
+
+Auth is Clerk, invite-only: sign-up is Restricted in the Clerk dashboard, and testers are added under Users → Invitations. Sign-in is Google or an email code at `/sign-in`. Every page, API route, and public Convex function requires a session, and each user sees only their own practices, sessions, and debriefs.
+
+## Checks
+
+```bash
+pnpm test             # unit tests
+pnpm lint
+npx tsc --noEmit -p .
+pnpm eval:signoff     # the sign-off detector against recorded windows; needs OPENAI_API_KEY in .env.local
+```
+
+## Deploy
+
+Vercel builds run `npx convex deploy --cmd 'pnpm build'` (see `vercel.json`), so the Convex functions and the app ship together. Engineering standards live in [docs/engineering-standards.md](docs/engineering-standards.md).

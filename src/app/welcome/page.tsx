@@ -111,7 +111,7 @@ const WelcomePage = () => {
           disabled={!accepted || submitting}
           className="focus-ring mt-6 w-full rounded-[10px] bg-accent-blue px-4 py-3 text-[13.5px] font-medium text-primary-foreground shadow-btn transition hover:bg-accent-blue-hover active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50"
         >
-          {submitting ? "Setting up…" : "Enter Prestage AI →"}
+          {submitting ? "Setting up…" : "Enter Prestage →"}
         </button>
         {failed && (
           <p role="alert" className="mt-3 text-[13px] text-red-fg">

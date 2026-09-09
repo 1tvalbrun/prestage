@@ -165,19 +165,29 @@ const Lane = ({
   onDelete: (practice: PracticeRow) => void
 }) => (
   <div className="mb-[18px]">
-    <button
-      type="button"
-      onClick={onToggle}
-      aria-expanded={!collapsed}
-      className="focus-ring flex w-full items-center gap-[7px] rounded-md px-2.5 pb-[5px] text-[10.5px] font-semibold uppercase tracking-[.09em] text-on-surface-3 transition-colors hover:text-on-surface-2"
-    >
-      <span aria-hidden="true" className="h-[7px] w-[7px] rounded-full bg-ink-4" />
-      {getPack(packId).label}
-      <ChevronDown
-        aria-hidden="true"
-        className={cn("ml-auto size-3 transition-transform", collapsed && "-rotate-90")}
-      />
-    </button>
+    <div className="group/lane flex items-center gap-1 pb-[5px]">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={!collapsed}
+        className="focus-ring flex min-w-0 flex-1 items-center gap-[7px] rounded-md px-2.5 py-0.5 text-[10.5px] font-semibold uppercase tracking-[.09em] text-on-surface-3 transition-colors hover:text-on-surface-2"
+      >
+        <span aria-hidden="true" className="h-[7px] w-[7px] flex-none rounded-full bg-ink-4" />
+        <span className="truncate">{getPack(packId).label}</span>
+        <ChevronDown
+          aria-hidden="true"
+          className={cn("ml-auto size-3 flex-none transition-transform", collapsed && "-rotate-90")}
+        />
+      </button>
+      {/* Straight into this lane's intake, with the lane preselected. */}
+      <Link
+        href={`/simulation/new?lane=${packId}`}
+        aria-label={`New practice: ${getPack(packId).label}`}
+        className="focus-ring grid size-6 flex-none place-items-center rounded-md text-ink-4 opacity-0 transition-opacity hover:bg-surface-2 hover:text-on-surface-2 focus-visible:opacity-100 group-hover/lane:opacity-100 pointer-coarse:opacity-100"
+      >
+        <Plus className="size-3.5" />
+      </Link>
+    </div>
     {/* 0fr → 1fr grid rows animate height without measuring it; inert keeps
         folded threads out of the tab order and accessibility tree. */}
     <div

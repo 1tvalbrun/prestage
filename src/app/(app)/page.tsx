@@ -3,13 +3,13 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ChevronRight, Plus, Trash2, Video } from "lucide-react"
+import { ChevronRight, Trash2, Video } from "lucide-react"
 import { useMutation, useQuery } from "convex/react"
 import { api } from "@convex/_generated/api"
 import type { Id } from "@convex/_generated/dataModel"
 import { cn, relativeDay } from "@/lib/utils"
 import { getPack, isPackId } from "@/domains/registry"
-import { BTN_PRIMARY } from "@/components/shared/buttons"
+import { BTN_PRIMARY, BTN_SECONDARY } from "@/components/shared/buttons"
 import { personaInitials } from "@/components/shared/PersonaAvatar"
 import { LaneBadge } from "@/components/shared/LaneBadge"
 import { PersonaAvatar } from "@/components/shared/PersonaAvatar"
@@ -20,6 +20,10 @@ import {
 } from "@/components/shared/DeletePracticeDialog"
 import { focusNewPractice, type PracticeRow } from "@/components/layout/AppRail"
 import { firstNameOf } from "@/domains/types"
+
+// Three rows on a wide screen. The sidebar is the full list; the grid is
+// the recent page of it.
+const HOME_GRID_CAP = 9
 
 const greeting = (hour: number) =>
   hour < 5 ? "Good night" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"
@@ -231,6 +235,9 @@ const HomePage = () => {
   const [confirmTarget, setConfirmTarget] = useState<PracticeRow | null>(null)
   const [confirmOpen, setConfirmOpen] = useState(false)
   const [deleteFailed, setDeleteFailed] = useState(false)
+  const [showAll, setShowAll] = useState(false)
+
+  const handleToggleShowAll = () => setShowAll((prev) => !prev)
 
   const handleRequestDelete = (practice: PracticeRow) => {
     setConfirmTarget(practice)
@@ -249,6 +256,7 @@ const HomePage = () => {
 
   if (practices === undefined) return null
 
+  const shown = showAll ? practices : practices.slice(0, HOME_GRID_CAP)
   const resume =
     practices.find((practice) => practice.hasLive) ??
     practices.find((practice) => practice.openItems > 0) ??
@@ -307,23 +315,21 @@ const HomePage = () => {
         </div>
         {deleteFailed && <DeletePracticeError className="mb-3 px-0.5" />}
         <div className="grid grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3.5 max-md:grid-cols-1">
-          {practices.map((practice) => (
+          {shown.map((practice) => (
             <PracticeCard
               key={practice.practiceId as Id<"practices">}
               practice={practice}
               onDelete={() => handleRequestDelete(practice)}
             />
           ))}
-          <Link
-            href="/simulation/new"
-            className="col-span-full flex min-h-[130px] w-[min(360px,100%)] flex-col items-center justify-center justify-self-center gap-2.5 rounded-xl border border-dashed border-line-2 text-on-surface-3 transition hover:bg-surface-2 hover:text-on-surface-2"
-          >
-            <span className="grid h-9 w-9 place-items-center rounded-full border border-dashed border-line-2">
-              <Plus className="size-[15px]" />
-            </span>
-            <span className="text-[13px] font-medium">New practice</span>
-          </Link>
         </div>
+        {practices.length > HOME_GRID_CAP && (
+          <div className="mt-4 flex justify-center">
+            <button type="button" onClick={handleToggleShowAll} className={BTN_SECONDARY}>
+              {showAll ? "Show fewer" : `Show all ${practices.length}`}
+            </button>
+          </div>
+        )}
       </section>
 
       <DeletePracticeDialog

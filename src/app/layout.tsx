@@ -35,9 +35,9 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: "Prestage AI · Practice with a live AI panel",
+  title: "Prestage · Practice before it counts",
   description:
-    "Practice your pitch, sale, or audit interview live with an AI avatar, and leave with feedback and action items.",
+    "Rehearse your pitch, sale, audit, or interview live with a counterpart who has read your materials and pushes back, and leave with what held, what didn't, and what to fix.",
 }
 
 const RootLayout = ({ children }: { children: React.ReactNode }) => {

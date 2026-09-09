@@ -71,7 +71,7 @@ const SignInPage = () => (
       </div>
 
       <p className="hidden font-mono text-[10px] uppercase tracking-[.09em] text-ink-4 lg:block">
-        Prestage AI · a live panel stress test · invited testing
+        Prestage · a live panel stress test · invited testing
       </p>
       </div>
     </section>

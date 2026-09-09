@@ -889,7 +889,7 @@ const RoomShellBody = ({
             avatarId={persona.avatarId}
             connect={handleConnect}
             // The SDK caches credentials by (avatarId, sessionId, sessionKey,
-            // connectUrl, baseUrl) and never invalidates (findings doc §1) —
+            // connectUrl, baseUrl) and never invalidates —
             // the connect callback is NOT in the key. Without a per-attempt
             // component in the key, a second session with the same persona in
             // one page lifetime silently reuses the first session's

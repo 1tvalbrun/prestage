@@ -1,14 +1,14 @@
 import { LegalShell } from "@/components/shared/LegalShell"
 import { LEGAL_ENTITY } from "@/lib/legal"
 
-export const metadata = { title: "Privacy Policy · Prestage AI" }
+export const metadata = { title: "Privacy Policy · Prestage" }
 
 const PrivacyPage = () => (
   <LegalShell title="Privacy Policy">
     <section>
       <h2>Who we are</h2>
       <p>
-        Prestage AI is operated by {LEGAL_ENTITY}, the data controller for the personal data
+        Prestage is operated by {LEGAL_ENTITY}, the data controller for the personal data
         described here. Contact:{" "}
         <a className="underline" href="mailto:development@mediabymayday.com">
           development@mediabymayday.com
