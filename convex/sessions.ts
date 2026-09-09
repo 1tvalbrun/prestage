@@ -25,10 +25,13 @@ import { IDLE_END_MS, IDLE_PROMPT_MS } from "../src/lib/idleRule"
 import {
   debriefValidator,
   endedReasonValidator,
+  micCheckValidator,
   noteTypeValidator,
   transcriptTypeValidator,
   type EndedReason,
 } from "./schema"
+import { MIN_DB } from "../src/lib/micCheck"
+import type { Infer } from "convex/values"
 import { ownedOrNull, requireIdentity } from "./guard"
 import { recordUsage } from "./usage"
 import { VERDICT_RESTATE_DIRECTIVE } from "../src/lib/ending"
@@ -60,7 +63,8 @@ export const insertSessionForPersona = async (
   ctx: MutationCtx,
   practice: Doc<"practices">,
   pack: DomainPack,
-  personaId: string
+  personaId: string,
+  micCheck?: Infer<typeof micCheckValidator>
 ): Promise<Id<"sessions">> => {
   const persona = pack.personas.find((p) => p.id === personaId)
   if (!persona) throw new Error("Unknown persona")
@@ -81,6 +85,7 @@ export const insertSessionForPersona = async (
       avatarId: avatar.runwayAvatarId,
     },
     roomMs: variantOf(pack, practice.scope).roomMinutes * 60_000,
+    ...(micCheck ? { micCheck } : {}),
     transcript: [],
     liveNotes: [],
     status: "live",
@@ -94,8 +99,16 @@ export const insertSessionForPersona = async (
   return sessionId
 }
 
+// A level outside the check's own scale is not a measurement; it is
+// dropped rather than stored, so the calibration data stays honest.
+const isMeasuredLevel = (db: number): boolean => Number.isFinite(db) && db >= MIN_DB && db <= 0
+
 export const create = mutation({
-  args: { practiceId: v.id("practices"), personaId: v.string() },
+  args: {
+    practiceId: v.id("practices"),
+    personaId: v.string(),
+    micCheck: v.optional(micCheckValidator),
+  },
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
     const practice = ownedOrNull(identity, await ctx.db.get(args.practiceId))
@@ -109,11 +122,16 @@ export const create = mutation({
       )
       .first()
     if (live) return live._id
+    const micCheck =
+      args.micCheck && isMeasuredLevel(args.micCheck.noiseDb) && isMeasuredLevel(args.micCheck.voiceDb)
+        ? args.micCheck
+        : undefined
     const sessionId = await insertSessionForPersona(
       ctx,
       practice,
       getPack(practice.packId),
-      args.personaId
+      args.personaId,
+      micCheck
     )
     // The practice remembers who it's with; the next session defaults to
     // the same persona.
