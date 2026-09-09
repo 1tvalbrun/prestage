@@ -13,6 +13,11 @@ const MINUTE_WORDS: Record<number, string> = {
   5: "five",
 }
 
+// Spoken minutes: "a minute", "two minutes". Shared by the start script
+// and the room's connecting copy so they can never disagree.
+export const minutesPhrase = (minutes: number): string =>
+  minutes === 1 ? "a minute" : `${MINUTE_WORDS[minutes] ?? String(minutes)} minutes`
+
 export const endingContract = (personaFirstName: string, roomMinutes: number): string => {
   const minutes = MINUTE_WORDS[roomMinutes] ?? String(roomMinutes)
   // Measured live pace is 13-17s per exchange (~4/minute), and the model
@@ -41,12 +46,12 @@ After your close, never reopen the discussion. Respond warmly and briefly, and p
 // explicit terms now live on the connecting screen instead, where time is
 // free. Runway caps startScript at 2000 chars; the base script wins if space
 // is short.
-export const withTimeContract = (startScript: string): string => {
+export const withTimeContract = (startScript: string, minutes: number): string => {
   // Promises the time limit without priming a rush: "on the clock" read as
   // urgency and showed up live as a three minute close. "Up to", not a flat
-  // five, and "make them count", not "use every one" — the room lands when
-  // the close is delivered, so nothing spoken may promise the full five.
-  const contract = ` We have the room for up to five minutes, so let's make them count.`
+  // number, and "make them count", not "use every one" — the room lands when
+  // the close is delivered, so nothing spoken may promise the full budget.
+  const contract = ` We have the room for up to ${minutesPhrase(minutes)}, so let's make them count.`
   const combined = `${startScript}${contract}`
   return combined.length <= 2_000 ? combined : startScript
 }
@@ -55,27 +60,3 @@ export const withTimeContract = (startScript: string): string => {
 // written verdict never contradicts a close the user already heard.
 export const VERDICT_RESTATE_DIRECTIVE = `
 If the transcript ends with the panelist delivering a closing verdict, your spokenVerdict and verdictSummary must restate that same close in the same spirit. Do not compose a rival verdict that contradicts what was said aloud.`
-
-// The close check runs as its own model call (orchestrator.decide), never
-// as a rider on the note-taking prompt: piggybacked, detection failed on
-// the recorded sessions once post-close chatter filled the window; as a
-// single-task question it went 39/39 across every window of both. The
-// ended/not-ended definition covers deflections on purpose — every
-// post-close turn is then a fresh detection chance, so a check debounced
-// away at the close itself still catches on the next turn.
-export const CLOSE_CHECK_PROMPT = `You are watching a live practice session between a USER and a PANELIST who interviews them. Decide one thing: has the panelist ENDED the session?
-
-Ended (true): the panelist has delivered a wrap-up or final read on how the user did, said goodbye or "see you next time", or is now declining new questions by pointing to a future session or the written debrief.
-Not ended (false): the panelist is still working — asking questions, probing answers, reacting to what the user says — or has only announced that a final question is coming without wrapping up afterward.
-
-Answer with JSON only: {"sessionEnded": true|false}`
-
-// The exact window shape the prompt was validated against: last eight
-// turns, USER/PANELIST labels — persona- and pack-agnostic.
-export const closeCheckWindow = (
-  turns: { type: "user" | "panelist"; text: string }[]
-): string =>
-  turns
-    .slice(-8)
-    .map((turn) => (turn.type === "user" ? `USER: ${turn.text}` : `PANELIST: ${turn.text}`))
-    .join("\n")

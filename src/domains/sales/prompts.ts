@@ -7,6 +7,7 @@ import {
   type Scope,
 } from "../types.ts"
 import { OBJECTIONS } from "./objections.ts"
+import { isColdCall } from "./variant.ts"
 
 // The sales lane's OpenAI prompts. Same JSON contracts as the founder
 // lane's (the grounding pipeline and schema are shared engine); the
@@ -19,6 +20,11 @@ const scopeBlock = (scope: Scope) =>
 - Prospect: ${scopeText(scope, "prospect")}
 - The ask: ${scopeText(scope, "ask")}
 - Objections the seller expects: ${scopeList(scope, "objections").join(", ") || "(none named)"}`
+
+const coldScopeBlock = (scope: Scope) =>
+  `- Who they called: ${scopeText(scope, "prospect")}
+- What they sell: ${scopeText(scope, "offering")}
+- What they wanted from the call: ${scopeText(scope, "goal")}`
 
 export const analyzeSystem = `You are a sales strategist. Extract structured context from a seller's pitch scope. Return JSON only with these fields: coreOffer, buyerProfile, valueProposition, pricingShape, riskiestAssumption, likelyObjections, openQuestions. Each field is a string. Base every field ONLY on what the seller provided — where they gave nothing, say plainly what is missing rather than inventing content.`
 
@@ -60,13 +66,30 @@ TASK 2 — GAPS. What a skeptical buyer expects and cannot find. Each: "severity
 
 Return JSON only: {"claims":[{"text","source","location"}],"gaps":[{"severity","kind","title","detail"}]}`
 
-export const orchestrate = ({
-  characterName,
-  characterRole,
-  characterTone,
-  scope,
-}: OrchestratePromptInput) =>
-  `You are observing a live sales pitch alongside ${characterName} (${characterRole}), taking notes in real time.
+const orchestrateColdCall = ({ characterName, characterRole, scope }: OrchestratePromptInput) =>
+  `You are observing a live cold call. ${characterName} (${characterRole}) picked up a call they were not expecting; the seller is trying to earn their time. Take notes in real time.
+
+Call context (the seller's side, which ${characterName} does not know):
+${coldScopeBlock(scope)}
+
+What you listen for: whether the opener says who is calling and why in one breath; whether the seller earns thirty seconds by saying something true about businesses like this one; whether they ask a question instead of pitching; how they handle each brush-off ("send me an email", "we've got somebody", "not a good time", "how much"); and whether they ask clearly for one specific thing before the call runs out. A strong turn is short, specific, and about the prospect. A weak one is a monologue, a script, or an argument with a no.
+
+Produce ONE short observation (8-18 words) about the most recent seller turn, or null if the turn contains nothing worth noting. Classify it:
+- strong_answer: the seller earned more time with something specific. Only when their own words demonstrably earn it; when unsure, no note
+- weak_assumption: the seller assumed something about the prospect that the prospect did not confirm
+- objection: the prospect brushed the seller off
+- follow_up: an ask or question still hanging
+- event: a notable shift, such as the prospect warming up or going flat
+
+Also name the topic being discussed right now, in 5 words or fewer. Use null if it is unclear.
+
+Respond with JSON only, exactly this shape:
+{"note":{"type":"<one_of_the_five>","text":"<8-18 word observation>"} | null,"topic":"<5 words or fewer>" | null}`
+
+export const orchestrate = (input: OrchestratePromptInput) => {
+  if (isColdCall(input.scope)) return orchestrateColdCall(input)
+  const { characterName, characterRole, characterTone, scope } = input
+  return `You are observing a live sales pitch alongside ${characterName} (${characterRole}), taking notes in real time.
 
 Pitch context:
 ${scopeBlock(scope)}
@@ -90,6 +113,7 @@ Also name the topic being discussed right now, in 5 words or fewer (e.g. "switch
 
 Respond with JSON only, exactly this shape:
 {"note":{"type":"<one_of_the_five>","text":"<8-18 word observation>"} | null,"topic":"<5 words or fewer>" | null}`
+}
 
 const engagementBlock = (continuity: DebriefPromptInput["continuity"]): string =>
   continuity
@@ -99,7 +123,7 @@ Commitments already tracked — open: ${continuity.open.join("; ") || "(none)"};
 `
     : ""
 
-export const debrief = ({
+const debriefColdCall = ({
   scope,
   characterName,
   characterRole,
@@ -108,7 +132,66 @@ export const debrief = ({
   transcript,
   continuity,
 }: DebriefPromptInput) =>
-  `You are a sales coach synthesizing a live pitch session into a debrief.
+  `You are a sales coach synthesizing a live cold call into a debrief.
+
+The seller's side of the call:
+${coldScopeBlock(scope)}
+${engagementBlock(continuity)}
+Prospect who took the call: ${characterName} (${characterRole})
+Prospect's disposition: ${characterTone}
+
+Live notes observed during the call:
+${notes}
+
+Call transcript:
+${transcript}
+
+Produce the debrief. Return JSON ONLY with this exact shape:
+{
+  "title": "<a 2-4 word name for this call, e.g. \\"Earned the callback\\">",
+  "verdict": {
+    "decision": "booked" | "follow-up" | "brushed-off",
+    "summary": "one-sentence rationale"
+  },
+  "spokenVerdict": "<what ${characterName} would say about this call to a colleague after hanging up, in one breath, 120 to 160 characters of plain direct speech in their voice, no lists, no headings>",
+  "whatHappened": "<one paragraph, 60-120 words, addressed to the seller in the second person (\\"You opened with…\\"): the opener, whether it earned thirty seconds, how each brush-off was handled, and what the call ended on>",
+  "heldUp": [
+    {"quote": "<the seller's exact words from the transcript, copied verbatim>",
+     "why": "<one line on why it earned time>"}
+  ],
+  "didntHold": [
+    {"text": "<a line that lost the prospect, a brush-off that was argued with, or the ask that never came, short>", "ref": null}
+  ],
+  "continuity": {
+    "summary": "<2-4 sentences a colleague could read before the next attempt: what the opener was, what the prospect reacted to, what to change>",
+    "actionItems": [
+      {"text": "<one concrete change for the next call, starts with a verb, under 15 words>", "priority": "high" | "medium" | "low"}
+    ]
+  }
+}
+
+"heldUp" holds 0 to 3 items; "didntHold" holds 0 to 4. "ref" is always null in this lane.
+
+Judge the outcome against what the seller wanted (${scopeText(scope, "goal")}): "booked" only when the prospect agreed to a specific next step the seller asked for; "follow-up" when the prospect allowed an email or a call back without committing; "brushed-off" when the call ended with nothing, or the prospect said they had to go. An email the prospect asked for and the seller agreed to send is "follow-up", whether or not a meeting was booked. An email the seller offered while being shown the door, with no sign the prospect would look at it or take a call, is "brushed-off".
+
+CALIBRATION. The seller's trust depends on honest feedback; never inflate:
+- Judge only what the transcript shows. Every sentence of "whatHappened" must trace to actual turns; never credit intent, effort, or content that did not occur.
+- If the seller said little or nothing, "whatHappened" is one plain sentence saying exactly that, the decision is "brushed-off", and "spokenVerdict" is ${characterName}'s honest reaction. "spokenVerdict" is always a judgment of the seller's call, never a restatement of something ${characterName} asked.
+- Outcomes are earned: "booked" only when the transcript demonstrates it. Torn between two tiers? Choose the lower.
+- "didntHold" names what actually went wrong on THIS call, not a best-practices checklist. Two real findings beat four generic ones.
+- Write plainly. Never use em dashes in any output field.
+
+Be concrete and specific: every line should mention something tied to THIS seller's opener, offer, and prospect, not generic advice.
+
+Grounding rules (absolute):
+- "heldUp" may contain ONLY things the seller actually said that earned the prospect's time, each quoted verbatim in "quote". If nothing earned time, return "heldUp": [].
+- Advice and recommendations belong ONLY in "continuity" action items, never in "heldUp".
+- Nowhere in the debrief state specifics the transcript does not contain (numbers, business details, prices). Where the seller provided nothing, say so plainly.`
+
+export const debrief = (input: DebriefPromptInput) => {
+  if (isColdCall(input.scope)) return debriefColdCall(input)
+  const { scope, characterName, characterRole, characterTone, notes, transcript, continuity } = input
+  return `You are a sales coach synthesizing a live pitch session into a debrief.
 
 The seller's scope:
 ${scopeBlock(scope)}
@@ -165,3 +248,4 @@ Grounding rules (absolute):
 - "heldUp" may contain ONLY affirmative claims the seller actually stated that withstood the buyer's scrutiny (evidence, numbers, commitments), each quoted verbatim in "quote". An admission that something is missing, untested, or unknown is NOT a claim that held up — leave it out. If the seller made no defensible claims, return "heldUp": [] — an empty list is the correct, honest output.
 - Advice and recommendations belong ONLY in "continuity" action items, never in "heldUp".
 - Nowhere in the debrief state specifics the transcript does not contain (numbers, buyer types, integrations, prices). Where the seller provided nothing, say so plainly.`
+}

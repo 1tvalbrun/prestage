@@ -21,7 +21,9 @@ export const scopeList = (scope: Scope, key: string): string[] => {
   return Array.isArray(value) ? value : []
 }
 
-export type ScopeFieldOption = { value: string; label: string }
+// hint is the one-line description a chooser renders under the label; the
+// chip grid ignores it.
+export type ScopeFieldOption = { value: string; label: string; hint?: string }
 
 // One intake field. Drives the generic scope form and the server-side
 // validation in simulations.create (unknown keys dropped, sizes clamped).
@@ -45,6 +47,7 @@ export type ContextField = { key: string; label: string }
 // bad < mid < good. See verdictDirection in registry.
 export type VerdictTone = "good" | "mid" | "bad"
 export type VerdictOption = { value: string; label: string; tone: VerdictTone }
+export type VerdictVocabulary = { options: VerdictOption[]; fallback: string }
 
 // An interviewer identity. The spoken personality lives on the Runway
 // Character; these fields feed UI labels and the debrief prompts. attack is
@@ -278,6 +281,31 @@ export type PackCopy = {
   promptHelpers: string[]
 }
 
+// How one practice differs from its lane's default shape. Everything the
+// engine reads per practice instead of per lane lives here, so adding a
+// kind to a lane edits that lane's resolver and nothing else.
+export type PracticeVariant = {
+  scopeFields: ScopeField[]
+  // Whether the read and prep stages run before the panel.
+  prep: boolean
+  // The one persona this practice faces; null lets the panel offer a choice.
+  personaId: string | null
+  roomMinutes: number
+  // Whether the panelist lands a closing read (and the room may end on it).
+  closingRead: boolean
+  // Whether the persona carries the engagement into the next session. A
+  // cold-call prospect does not: the to-do list is the user's memory, and
+  // copy must never say the persona is waiting on it.
+  remembers: boolean
+  verdicts: VerdictVocabulary
+  copy: {
+    formSections: PackCopy["form"]["sections"]
+    // Null hides the typed form's preview rail.
+    preview: PackCopy["preview"] | null
+    panelLead: string
+  }
+}
+
 export type DomainPack = {
   id: string
   // Onboarding card copy (the lane chooser).
@@ -298,11 +326,22 @@ export type DomainPack = {
   // how the room UI titles them (e.g. "Founder").
   userLabel: string
   userTitle: string
+  // The lane's spoken-intake fields (what extraction can hear) and the
+  // default shape for lanes without variants. Per-practice shape comes
+  // from variantOf, never from this list directly.
   scopeFields: ScopeField[]
   contextFields: ContextField[]
-  // Closed verdict vocabulary. fallback is stored when model output is
-  // outside it.
-  verdicts: { options: VerdictOption[]; fallback: string }
+  // Every verdict value the lane can produce, for badges and direction.
+  // A variant narrows this to the values its debrief may pick.
+  verdicts: VerdictVocabulary
+  // Lanes whose practices come in kinds (the sales lane's call types)
+  // declare the chips field whose answer picks the kind, and resolve the
+  // kind's shape from the scope. Absent means one shape (variantOf).
+  variantField?: string
+  variant?: (scope: Scope) => PracticeVariant
+  // What to practice next, given how the last session went. The intake
+  // seeds from the returned scope (?from=&next=1). Null means no suggestion.
+  nextStep?: (scope: Scope, verdict: string) => { label: string; scope: Scope } | null
   // The assessor's evidence request list for the current scope, shown at
   // intake before upload — the real-audit order is "here's what to
   // produce", then evidence, then the interview. Only packs with a

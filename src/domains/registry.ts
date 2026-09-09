@@ -2,7 +2,15 @@ import { founderPack } from "./founder/pack.ts"
 import { salesPack } from "./sales/pack.ts"
 import { auditPack } from "./audit/pack.ts"
 import { interviewPack } from "./interview/pack.ts"
-import type { DomainPack, VerdictOption, VerdictTone } from "./types.ts"
+import type {
+  DomainPack,
+  Persona,
+  PracticeVariant,
+  Scope,
+  VerdictOption,
+  VerdictTone,
+} from "./types.ts"
+import { ROOM_MS } from "../lib/roomClock.ts"
 
 // The one list of lanes. Onboarding renders it, users.lanes validates
 // against it, and every engine read resolves a pack through it.
@@ -19,6 +27,30 @@ export const isPackId = (id: string): boolean => id in PACKS
 
 export const getPack = (packId?: string): DomainPack =>
   (packId !== undefined ? PACKS[packId] : undefined) ?? founderPack
+
+// The shape of one practice. Packs without variants get their own fields
+// and copy back, so the engine can read a variant everywhere.
+export const variantOf = (pack: DomainPack, scope: Scope): PracticeVariant =>
+  pack.variant?.(scope) ?? {
+    scopeFields: pack.scopeFields,
+    prep: true,
+    personaId: null,
+    roomMinutes: ROOM_MS / 60_000,
+    closingRead: true,
+    remembers: true,
+    verdicts: pack.verdicts,
+    copy: {
+      formSections: pack.copy.form.sections,
+      preview: pack.copy.preview,
+      panelLead: pack.copy.panel.lead,
+    },
+  }
+
+// The one panelist a practice can face, when there is exactly one: the
+// variant locks them, or the lane has a single persona.
+export const lockedPersona = (pack: DomainPack, variant: PracticeVariant): Persona | null =>
+  pack.personas.find((persona) => persona.id === variant.personaId) ??
+  (pack.personas.length === 1 ? pack.personas[0] : null)
 
 // Cross-lane verdict lookup for surfaces that mix practices from several
 // packs (badges, session lists). Values are distinct across packs by

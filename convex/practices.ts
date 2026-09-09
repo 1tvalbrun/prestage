@@ -15,7 +15,7 @@ import type { Blueprint } from "../src/lib/blueprint"
 import { materialFileType, validateMaterialFile } from "../src/lib/materials"
 import { DECK_EXTRACTION_CAUTION, parseExtractedScope } from "../src/lib/intake"
 import { createOpenAI, modelSettings } from "../src/lib/openai"
-import { getPack, isPackId } from "../src/domains/registry"
+import { getPack, isPackId, variantOf } from "../src/domains/registry"
 import { scopeText, type Scope } from "../src/domains/types"
 import { priorityValidator } from "./schema"
 import { insertSessionForPersona } from "./sessions"
@@ -52,8 +52,12 @@ export const create = mutation({
     // UI can be bypassed — validate against the pack's field list: unknown
     // keys are dropped, free text is clamped, multi values are capped, and
     // fields with a declared vocabulary only accept its labels.
+    // The variant is resolved from the raw scope on purpose: an unknown or
+    // missing call type resolves to the pre-choice shape, whose only field
+    // is the required chooser, so a bypassed client fails on it.
+    const variant = variantOf(pack, args.scope)
     const scope: Scope = {}
-    for (const field of pack.scopeFields) {
+    for (const field of variant.scopeFields) {
       const raw = args.scope[field.key]
       const labels = field.options?.map((option) => option.label)
       if (field.kind === "multi") {
@@ -78,6 +82,13 @@ export const create = mutation({
     const name = scopeText(scope, pack.subjectField)
     if (name.length === 0) throw new Error("Missing a name for this practice")
 
+    // A practice without prep is ready the moment it exists: no read, no
+    // audit, and nothing to schedule. It also takes no materials; the form
+    // never offers them, so any here is a bypass.
+    if (!variant.prep && (args.materials ?? []).length > 0) {
+      throw new Error("This practice takes no materials")
+    }
+
     // Every create is a new thread on purpose — "CourtTime · gym pilot" and
     // "CourtTime · school district" are different practices even when the
     // product is the same.
@@ -85,9 +96,10 @@ export const create = mutation({
       userId: identity.subject,
       name,
       packId: pack.id,
-      status: "draft",
+      status: variant.prep ? "draft" : "ready",
       scope,
     })
+    if (!variant.prep) return practiceId
 
     for (const upload of args.materials ?? []) {
       // The client validates before uploading; anything invalid here is a
@@ -222,6 +234,10 @@ export const list = query({
           practiceId: practice._id,
           name: practice.name,
           packId: practice.packId,
+          // Whether the persona carries the engagement forward; the resume
+          // hero's copy hangs on it. Resolved here so the list ships a flag,
+          // not every practice's intake.
+          remembers: variantOf(getPack(practice.packId), practice.scope).remembers,
           personaId: practice.personaId ?? null,
           pinned: practice.pinned ?? false,
           status: practice.status,
@@ -332,8 +348,7 @@ export const continueSession = mutation({
     if (!practice.personaId || practice.status !== "ready") return { sessionId: null }
     const sessionId = await insertSessionForPersona(
       ctx,
-      args.id,
-      identity.subject,
+      practice,
       getPack(practice.packId),
       practice.personaId
     )

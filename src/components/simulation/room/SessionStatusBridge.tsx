@@ -1,8 +1,7 @@
 "use client"
 
-import { useEffect, useRef } from "react"
-import { useAvatarStatus, useLocalMedia, useTranscription } from "@runwayml/avatars-react"
-import { isAvatarSpeech } from "@/lib/transcript"
+import { useEffect } from "react"
+import { useAvatar, useAvatarStatus, useLocalMedia } from "@runwayml/avatars-react"
 
 // The avatar session's connection phases, surfaced so the room can detect
 // a session that never produces an avatar (status stuck before "ready").
@@ -27,7 +26,7 @@ export const SessionStatusBridge = ({
 }: SessionStatusBridgeProps) => {
   const { micError } = useLocalMedia()
   const { status } = useAvatarStatus()
-  const silenceTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { participant } = useAvatar()
 
   useEffect(() => {
     onMicError(micError)
@@ -37,31 +36,21 @@ export const SessionStatusBridge = ({
     onAvatarStatus(status)
   }, [status, onAvatarStatus])
 
-  // The SDK exposes no audio-level API, so streaming transcription is the
-  // speaking signal. A turn's first interim arrives at speech onset (its
-  // final only lands when her next turn starts), so interims flip the
-  // indicator on immediately; a final (or interim silence) decays it.
-  useTranscription(
-    (entry) => {
-      if (!isAvatarSpeech(entry)) return
-      onSpeakingChange(true)
-      if (silenceTimer.current) clearTimeout(silenceTimer.current)
-      silenceTimer.current = setTimeout(
-        () => onSpeakingChange(false),
-        entry.final ? 800 : 2500
-      )
-    },
-    { interim: true }
-  )
-
-  // Unmount also resets the indicator: clearing the timer alone would
-  // freeze a stale "Speaking" on whatever screen replaced the session.
+  // Speaking comes from the avatar's audio level, which LiveKit tracks on
+  // the remote participant. Transcript chunks were the signal before and
+  // arrive in bursts with gaps mid-sentence, which read as silence (observed
+  // live: a closing read cut off at a pause). Unmount resets the indicator
+  // so a stale "speaking" never outlives the session it belonged to.
   useEffect(() => {
+    if (!participant) return
+    const handleSpeaking = (speaking: boolean) => onSpeakingChange(speaking)
+    onSpeakingChange(participant.isSpeaking)
+    participant.on("isSpeakingChanged", handleSpeaking)
     return () => {
-      if (silenceTimer.current) clearTimeout(silenceTimer.current)
+      participant.off("isSpeakingChanged", handleSpeaking)
       onSpeakingChange(false)
     }
-  }, [onSpeakingChange])
+  }, [participant, onSpeakingChange])
 
   return null
 }

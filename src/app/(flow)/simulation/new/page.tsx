@@ -7,10 +7,11 @@ import { useAction, useMutation, useQuery } from "convex/react"
 import { api } from "@convex/_generated/api"
 import { Id } from "@convex/_generated/dataModel"
 import { cn } from "@/lib/utils"
-import { getPack, isPackId } from "@/domains/registry"
+import { getPack, isPackId, variantOf } from "@/domains/registry"
 import { initialFormState, laneFormsReducer, type IntakeFormAction } from "@/lib/intakeForm"
-import type { Scope } from "@/domains/types"
+import { scopeText, type Scope } from "@/domains/types"
 import { FlowShell } from "@/components/simulation/flow/FlowShell"
+import { VariantChooser } from "@/components/simulation/intake/VariantChooser"
 import { TellIt } from "@/components/simulation/intake/TellIt"
 import { TypedForm } from "@/components/simulation/intake/TypedForm"
 import { ConfirmBrief } from "@/components/simulation/intake/ConfirmBrief"
@@ -18,6 +19,7 @@ import { useMaterialUploads } from "@/components/simulation/intake/materialUploa
 import { useAutoHideScrollbar } from "@/components/shared/useAutoHideScrollbar"
 
 type Beat =
+  | { kind: "choose" }
   | { kind: "tell" }
   | { kind: "type" }
   | { kind: "extracting" }
@@ -25,13 +27,14 @@ type Beat =
 
 // Voice-first intake for every lane. ?lane= wins over the user's default;
 // ?from= prefills the typed form from an existing practice's scope (and
-// pins its lane) so adjusting a brief never means retyping it.
+// pins its lane) so adjusting a brief never means retyping it; with
+// &next=1 the prefill is the lane's suggested next practice instead.
 const NewPracticePage = ({
   searchParams,
 }: {
-  searchParams: Promise<{ lane?: string; from?: string }>
+  searchParams: Promise<{ lane?: string; from?: string; next?: string }>
 }) => {
-  const { lane, from } = use(searchParams)
+  const { lane, from, next } = use(searchParams)
   const router = useRouter()
   const user = useQuery(api.users.getCurrent)
   const source = useQuery(api.practices.get, from ? { id: from as Id<"practices"> } : "skip")
@@ -64,8 +67,15 @@ const NewPracticePage = ({
   // Seeds the ?from= prefill once its source query lands (external data
   // arrival); the reducer ignores a seed for a lane that already exists.
   useEffect(() => {
-    if (source) dispatchForms({ lane: source.packId, action: { type: "seed", scope: source.scope } })
-  }, [source])
+    if (!source) return
+    const suggested = next
+      ? getPack(source.packId).nextStep?.(source.scope, source.lastVerdict ?? "")
+      : null
+    dispatchForms({
+      lane: source.packId,
+      action: { type: "seed", scope: suggested?.scope ?? source.scope },
+    })
+  }, [source, next])
 
   if (user === undefined) return null
   // A prefill source that's still loading would flash a blank form; one the
@@ -74,6 +84,20 @@ const NewPracticePage = ({
 
   const lanes = (user?.lanes ?? []).filter(isPackId)
   const prefilled = source !== null && source !== undefined
+  const form = forms[pack.id] ?? initialFormState()
+  const variant = variantOf(pack, form.scope)
+  const variantField = pack.variantField
+    ? variant.scopeFields.find((field) => field.key === pack.variantField)
+    : undefined
+  const needsChoice = variantField !== undefined && scopeText(form.scope, variantField.key) === ""
+  // The chooser comes first for a lane with kinds; a lane without prep has
+  // nothing to speak into, so "tell" reads as "type" there. Derived rather
+  // than stored: a lane switch or a cleared choice re-routes on its own.
+  const activeBeat: Beat = needsChoice
+    ? { kind: "choose" }
+    : beat.kind === "tell" && !variant.prep
+      ? { kind: "type" }
+      : beat
 
   const handleLaneSwitch = (laneId: string) => {
     if (laneId === pack.id) return
@@ -92,7 +116,11 @@ const NewPracticePage = ({
     setExtractFailed(false)
     try {
       const heard = await extractScope({ packId: pack.id, pitch: transcript, source: "voice" })
-      setBeat({ kind: "confirm", heard, seconds })
+      // Extraction never hears the kind; the chooser already answered it.
+      const chosen = variantField
+        ? { [variantField.key]: scopeText(form.scope, variantField.key) }
+        : {}
+      setBeat({ kind: "confirm", heard: { ...heard, ...chosen }, seconds })
     } catch {
       setExtractFailed(true)
       setBeat({ kind: "tell" })
@@ -107,21 +135,33 @@ const NewPracticePage = ({
       const practiceId = await createPractice({
         packId: pack.id,
         scope,
-        materials: uploads.readyMaterials,
+        materials: variant.prep ? uploads.readyMaterials : [],
       })
-      analyze({ id: practiceId }).catch(() => {
-        // The wait screen owns retries; a failed kick-off just means it
-        // starts the read itself.
-      })
-      router.push(`/simulation/${practiceId}/analyze`)
+      if (variant.prep) {
+        analyze({ id: practiceId }).catch(() => {
+          // The wait screen owns retries; a failed kick-off just means it
+          // starts the read itself.
+        })
+      }
+      router.push(`/simulation/${practiceId}/${variant.prep ? "analyze" : "panel"}`)
     } catch {
       setSubmitError("That didn't go through. Check your connection and try again.")
       setSubmitting(false)
     }
   }
 
+  const handleChoose = (label: string) => {
+    if (!variantField) return
+    dispatchForm({ type: "change", key: variantField.key, value: label })
+  }
+
+  const handleChangeChoice = () => {
+    if (!variantField) return
+    dispatchForm({ type: "change", key: variantField.key, value: "" })
+  }
+
   return (
-    <FlowShell stage="brief" packId={pack.id} fullBleed>
+    <FlowShell stage="brief" packId={pack.id} scope={form.scope} fullBleed>
       <div className="flex h-full min-h-0 flex-col px-10 pt-7 max-md:px-5">
       {lanes.length > 1 && !prefilled && (
         <nav aria-label="Practice lane" className="mb-7 flex flex-none flex-wrap justify-center gap-2">
@@ -145,13 +185,17 @@ const NewPracticePage = ({
         </nav>
       )}
 
-      {extractFailed && beat.kind === "tell" && (
+      {activeBeat.kind === "choose" && variantField && (
+        <VariantChooser field={variantField} onChoose={handleChoose} />
+      )}
+
+      {extractFailed && activeBeat.kind === "tell" && (
         <p role="alert" className="mx-auto mb-6 max-w-[46ch] text-center text-[13.5px] text-red-fg">
           Shaping your brief hit an error. Try again, or type it instead.
         </p>
       )}
 
-      {beat.kind === "tell" && (
+      {activeBeat.kind === "tell" && (
         <div ref={tellScroll} className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto pb-16 pt-6">
           <TellIt
             key={pack.id}
@@ -163,7 +207,7 @@ const NewPracticePage = ({
         </div>
       )}
 
-      {beat.kind === "extracting" && (
+      {activeBeat.kind === "extracting" && (
         <div className="flex flex-col items-center gap-3 pt-16 text-center">
           <span aria-hidden="true" className="h-2.5 w-2.5 animate-pulse rounded-full bg-accent-blue" />
           <p role="status" className="text-[15px] font-medium">
@@ -173,24 +217,40 @@ const NewPracticePage = ({
         </div>
       )}
 
-      {beat.kind === "type" && (
+      {activeBeat.kind === "type" && (
         <>
-          <div className="flex-none text-center">
+          <div className="mb-6 flex-none text-center">
             <h1 className="text-[25px] font-semibold tracking-[-.02em]">
               {pack.copy.tellIt.heading}
             </h1>
-            <button
-              type="button"
-              onClick={() => setBeat({ kind: "tell" })}
-              className="focus-ring mb-6 mt-3 inline-flex items-center gap-2 rounded-full border border-line-2 bg-surface-raised px-3.5 py-[6px] text-[12.5px] text-on-surface-3 transition-colors hover:bg-surface-2 hover:text-accent-blue max-md:py-2.5"
-            >
-              <Mic className="size-[13px]" />
-              Talk it instead. A minute is plenty
-            </button>
+            {variantField && (
+              <p className="mt-2 text-[12.5px] text-on-surface-3">
+                {scopeText(form.scope, variantField.key)}
+                <span aria-hidden="true"> · </span>
+                <button
+                  type="button"
+                  onClick={handleChangeChoice}
+                  className="focus-ring rounded underline hover:text-accent-blue"
+                >
+                  Change
+                </button>
+              </p>
+            )}
+            {variant.prep && (
+              <button
+                type="button"
+                onClick={() => setBeat({ kind: "tell" })}
+                className="focus-ring mt-3 inline-flex items-center gap-2 rounded-full border border-line-2 bg-surface-raised px-3.5 py-[6px] text-[12.5px] text-on-surface-3 transition-colors hover:bg-surface-2 hover:text-accent-blue max-md:py-2.5"
+              >
+                <Mic className="size-[13px]" />
+                Talk it instead. A minute is plenty
+              </button>
+            )}
           </div>
           <TypedForm
             pack={pack}
-            form={forms[pack.id] ?? initialFormState()}
+            variant={variant}
+            form={form}
             dispatch={dispatchForm}
             uploads={uploads}
             submitting={submitting}
@@ -200,13 +260,14 @@ const NewPracticePage = ({
         </>
       )}
 
-      {beat.kind === "confirm" && (
+      {activeBeat.kind === "confirm" && (
         <div ref={confirmScroll} className="scrollbar-subtle min-h-0 flex-1 overflow-y-auto pb-16">
           <ConfirmBrief
             key={pack.id}
             pack={pack}
-            heard={beat.heard}
-            seconds={beat.seconds}
+            variant={variant}
+            heard={activeBeat.heard}
+            seconds={activeBeat.seconds}
             uploads={uploads}
             submitting={submitting}
             submitError={submitError}

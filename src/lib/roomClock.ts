@@ -13,11 +13,14 @@ export const MIN_RECONNECT_MS = 30_000
 // longer than the briefed room budget — the room's own clock still lands
 // on time, the slack only exists so Runway never hangs up first.
 export const CONNECT_GRACE_SEC = 90
-// The goodbye beat after a detected close. Detection itself runs a turn
-// late (an avatar final commits only when her next turn starts), so by the
-// time this grace starts the user has heard the close and the persona's
-// warm sign-off is already underway.
-export const CLOSE_LAND_GRACE_MS = 12_000
+// Past the budget, a room without a closing read lets the user finish a
+// thought, then hands the persona the last word and lands when it is
+// spoken. Both waits are capped so the ending never hangs.
+export const TIME_FINISH_GRACE_MS = 8_000
+export const LAST_WORD_MAX_MS = 12_000
+// The wind-down line for a room without a closing read; the invitations
+// presume a panelist with a read to deliver.
+export const COLD_CALL_CUE = "Wrap it up. Ask for the next step."
 
 const CLOSING_FRACTION = 0.8
 const INVITE_FRACTION = 0.93
@@ -44,18 +47,51 @@ export const shouldInvite = (roomStartedAt: number, now: number, roomMs = ROOM_M
   return elapsed >= roomMs * INVITE_FRACTION && elapsed < roomMs - RESOLVE_MS
 }
 
-// Once the panelist has delivered the closing read (closeDeliveredAt is
-// stamped server-side by orchestrator.decide), the room lands after the
-// goodbye grace — dead air past a close is thrown-away paid time, observed
-// live as a minute of silence into the clock. Never mid-speech.
-export const shouldLandAfterClose = (
-  closeDeliveredAt: number | undefined,
-  now: number,
+// Whether the clock lands a room with a closing read: the persona's close
+// is never cut except at the floor.
+export const shouldLandOnTime = (
+  elapsed: number,
+  roomMs: number,
   avatarSpeaking: boolean
-): boolean =>
-  closeDeliveredAt !== undefined &&
-  !avatarSpeaking &&
-  now - closeDeliveredAt >= CLOSE_LAND_GRACE_MS
+): boolean => {
+  const reached = elapsed >= roomMs - RESOLVE_MS
+  const atFloor = elapsed >= roomMs - 2_000
+  return reached && (!avatarSpeaking || atFloor)
+}
+
+// The beats of a time-up without a closing read. "finish": the user is
+// mid-thought, let them end it. "handOff": the floor goes to the persona
+// (the room mutes the user and stamps lastWordAt). "lastWord": waiting for
+// that reply to be spoken. "land": it was, or nobody had anything to say.
+export type ColdTimeUp = "open" | "finish" | "handOff" | "lastWord" | "land"
+
+type ColdTimeUpInput = {
+  elapsed: number
+  roomMs: number
+  now: number
+  userSpeaking: boolean
+  avatarSpeaking: boolean
+  avatarSpokeAt: number | null
+  lastWordAt: number | null
+}
+
+export const coldTimeUp = ({
+  elapsed,
+  roomMs,
+  now,
+  userSpeaking,
+  avatarSpeaking,
+  avatarSpokeAt,
+  lastWordAt,
+}: ColdTimeUpInput): ColdTimeUp => {
+  if (elapsed < roomMs) return "open"
+  if (lastWordAt === null) {
+    return userSpeaking && elapsed < roomMs + TIME_FINISH_GRACE_MS ? "finish" : "handOff"
+  }
+  const replied = avatarSpokeAt !== null && avatarSpokeAt > lastWordAt && !avatarSpeaking
+  if (replied || now - lastWordAt >= LAST_WORD_MAX_MS) return "land"
+  return "lastWord"
+}
 
 // undefined roomStartedAt = first connect (full budget). Below the floor,
 // null: the room is effectively over — go to the debrief, don't mint.

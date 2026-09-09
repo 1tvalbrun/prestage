@@ -46,7 +46,8 @@ export type UsageKind = Infer<typeof usageKindValidator>
 // How a session's room ended (spec: Care Rules). Stamped at conclusion;
 // the future quota policy reads it (short/error sessions may not count).
 export const endedReasonValidator = v.union(
-  v.literal("verdict"), // close-detection landing: the panelist delivered the closing read and the room landed on it
+  v.literal("verdict"), // the panelist signed off (closing read or goodbye) and the room landed on it
+  v.literal("goodbye"), // the user signed off (or both did) and the room landed on it
   v.literal("time"),
   v.literal("user"),
   v.literal("idle"),
@@ -213,13 +214,34 @@ export default defineSchema({
     // orchestrator reads the last 12 turns anyway, so one look per window
     // is enough (sessions.claimOrchestrate).
     lastOrchestratedAt: v.optional(v.number()),
-    // Stamped once by orchestrator.decide when it sees the panelist's closing
-    // read in the transcript. The room lands on it after a goodbye grace
-    // (shouldLandAfterClose), and it corroborates a "verdict" endedReason.
+    // Retired 2026-09-07 in favor of signOff; kept optional for documents
+    // written before then. Never written or read.
     closeDeliveredAt: v.optional(v.number()),
+    // The sign-off protocol's stamp, reconciled by every check
+    // (sessions.reconcileSignOff): who signed off, when the stamp landed,
+    // and the spoken time of the last line the check saw, so the room can
+    // tell a reply that already happened from one still to come.
+    signOff: v.optional(
+      v.object({
+        by: v.union(v.literal("user"), v.literal("panelist"), v.literal("both")),
+        at: v.number(),
+        turnAt: v.number(),
+      })
+    ),
+    // "Keep going" on the ribbon: the check ignores everything spoken
+    // before this, so the same goodbye cannot re-stamp.
+    signOffDismissedAt: v.optional(v.number()),
+    // Throttle stamp for the paid sign-off check (sessions.claimSignOffCheck).
+    lastSignOffCheckAt: v.optional(v.number()),
+    // Server-observed connect time (route start to avatar READY), so
+    // production connects are measured.
+    connectMs: v.optional(v.number()),
     // Room clock anchor: stamped once at the first successful avatar connect
     // claim, never updated. All landing math derives from it (src/lib/roomClock).
     roomStartedAt: v.optional(v.number()),
+    // This session's room budget, stamped at insert from the practice's
+    // variant. Sessions from before the field ran the default (ROOM_MS).
+    roomMs: v.optional(v.number()),
     // Latest connecting browser tab; a mismatched live tab yields the room
     // instead of minting a competing avatar session.
     roomClientId: v.optional(v.string()),

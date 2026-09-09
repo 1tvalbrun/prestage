@@ -9,7 +9,7 @@ import { useMutation, useQuery } from "convex/react"
 import { api } from "@convex/_generated/api"
 import { Id } from "@convex/_generated/dataModel"
 import { cn } from "@/lib/utils"
-import { getPack } from "@/domains/registry"
+import { getPack, lockedPersona, variantOf } from "@/domains/registry"
 import { firstNameOf, scopeList, scopeText, type DomainPack, type Persona, type Scope } from "@/domains/types"
 import { BTN_PRIMARY, BTN_SECONDARY } from "@/components/shared/buttons"
 import { ReceiptChip } from "@/components/shared/ReceiptChip"
@@ -119,8 +119,10 @@ export const PanelSetup = ({ simulationId }: PanelSetupProps) => {
   if (practice === undefined || liveSession === undefined) return null
   if (practice === null) return <IdeaNotFound />
   const pack = getPack(practice.packId)
+  const variant = variantOf(pack, practice.scope)
+  const panelist = lockedPersona(pack, variant)
 
-  if (!practice.context) {
+  if (variant.prep && !practice.context) {
     return (
       <div>
         <StageKicker>{pack.copy.panel.kicker}</StageKicker>
@@ -161,18 +163,20 @@ export const PanelSetup = ({ simulationId }: PanelSetupProps) => {
 
   const gapCount = practice.audit?.status === "ready" ? practice.audit.gaps.length : 0
   const docChips = (materials ?? []).map((material) => material.name)
-  const trio = pack.personas.length > 1
   const recommended = recommendPersona(pack, practice.scope, practice.personaId ?? null)
+  const readLine = variant.prep
+    ? `${panelist ? `${firstNameOf(panelist.name)} has` : "They've all"} read your brief${docChips.length > 0 ? " and your documents" : ""}. `
+    : ""
 
   return (
     <div className="mx-auto max-w-[980px] text-center">
       <h1 className="text-[24px] font-semibold tracking-[-.02em]">{pack.copy.panel.heading}</h1>
       <p className="mx-auto mb-9 mt-2.5 max-w-[54ch] text-sm leading-relaxed text-on-surface-2">
-        {trio ? "All three have" : `${firstNameOf(pack.personas[0].name)} has`} read your brief
-        {docChips.length > 0 && " and your documents"}. {pack.copy.panel.lead}
+        {readLine}
+        {variant.copy.panelLead}
       </p>
 
-      {trio ? (
+      {panelist === null ? (
         <div className="grid grid-cols-3 items-stretch gap-4 text-left max-lg:mx-auto max-lg:max-w-[440px] max-lg:grid-cols-1">
           {pack.personas.map((persona) => {
             const isRecommended = persona.id === recommended.persona.id
@@ -233,7 +237,7 @@ export const PanelSetup = ({ simulationId }: PanelSetupProps) => {
         <div className="mx-auto max-w-[660px] overflow-hidden rounded-2xl border border-line bg-surface-raised text-left shadow-card">
           <div className="flex gap-6 p-7 pb-5 max-md:flex-col max-md:p-5 max-md:pb-4">
             <PortraitTile
-              persona={pack.personas[0]}
+              persona={panelist}
               className="h-24 w-24 flex-none rounded-xl max-md:h-40 max-md:w-full"
             />
             <div className="min-w-0 flex-1">
@@ -243,44 +247,42 @@ export const PanelSetup = ({ simulationId }: PanelSetupProps) => {
                   scopeText(practice.scope, pack.sessionMetaField) &&
                   ` · ${scopeText(practice.scope, pack.sessionMetaField)}`}
               </p>
-              <p className="text-[19px] font-semibold tracking-[-.015em]">
-                {pack.personas[0].name}
-              </p>
-              <p className="mb-2.5 mt-0.5 text-[13px] text-on-surface-3">
-                {pack.personas[0].role}
-              </p>
-              <AttackLine persona={pack.personas[0]} />
+              <p className="text-[19px] font-semibold tracking-[-.015em]">{panelist.name}</p>
+              <p className="mb-2.5 mt-0.5 text-[13px] text-on-surface-3">{panelist.role}</p>
+              <AttackLine persona={panelist} />
               <p className="mt-3 font-serif text-[15px] italic leading-normal text-on-surface-2">
-                &ldquo;{pack.personas[0].signature}&rdquo;
+                &ldquo;{panelist.signature}&rdquo;
               </p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2 border-t border-line bg-surface px-7 py-3.5 max-md:px-5">
-            <span className="text-xs text-on-surface-3">
-              {firstNameOf(pack.personas[0].name)}&apos;s read:
-            </span>
-            <ReceiptChip label="Your brief" />
-            {docChips.map((name) => (
-              <ReceiptChip key={name} label={name} />
-            ))}
-            {gapCount > 0 && <ReceiptChip label={`The gap map · ${gapCount} open`} />}
-          </div>
+          {variant.prep && (
+            <div className="flex flex-wrap items-center gap-2 border-t border-line bg-surface px-7 py-3.5 max-md:px-5">
+              <span className="text-xs text-on-surface-3">
+                {firstNameOf(panelist.name)}&apos;s read:
+              </span>
+              <ReceiptChip label="Your brief" />
+              {docChips.map((name) => (
+                <ReceiptChip key={name} label={name} />
+              ))}
+              {gapCount > 0 && <ReceiptChip label={`The gap map · ${gapCount} open`} />}
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-3.5 border-t border-line px-7 py-4 max-md:px-5">
             <button
               type="button"
-              onClick={() => handleEnterRoom(pack.personas[0].id)}
+              onClick={() => handleEnterRoom(panelist.id)}
               disabled={startingId !== null}
               className={BTN_PRIMARY}
             >
               {startingId ? "Opening the room" : "Enter the room"}
               {!startingId && <ArrowRight className="size-3.5" />}
             </button>
-            <span className="text-[12.5px] text-on-surface-3">{pack.copy.panel.lead}</span>
+            <span className="text-[12.5px] text-on-surface-3">{variant.copy.panelLead}</span>
           </div>
         </div>
       )}
 
-      {trio && (
+      {panelist === null && (
         <p className="mt-7 flex flex-wrap items-center justify-center gap-2 text-[12.5px] text-on-surface-3">
           They&apos;ve all read:
           <ReceiptChip label="Your brief" />

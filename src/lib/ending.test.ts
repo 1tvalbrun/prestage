@@ -1,6 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { closeCheckWindow, endingContract, withTimeContract } from "./ending.ts"
+import { endingContract, minutesPhrase, withTimeContract } from "./ending.ts"
 
 test("contract carries the load-bearing directives", () => {
   const contract = endingContract("Marcus", 5)
@@ -20,26 +20,22 @@ test("contract carries the load-bearing directives", () => {
   }
 })
 
-test("startScript contract stays inside Runway's 2000-char limit", () => {
+test("startScript contract words the room's minutes and stays inside Runway's 2000-char limit", () => {
   // A base long enough that appending the contract would cross the cap:
   // the guard must return the base unchanged, never a truncated hybrid.
   const nearCap = "x".repeat(1_990)
-  assert.equal(withTimeContract(nearCap), nearCap)
-  // "Up to", not a promise of the full five: the model closes when it
+  assert.equal(withTimeContract(nearCap, 5), nearCap)
+  // "Up to", not a promise of the full budget: the model closes when it
   // closes, and the spoken contract must survive an early landing.
-  assert.ok(withTimeContract("Welcome.").includes("up to five minutes"))
-  assert.ok(withTimeContract("Welcome.").length <= 2_000)
+  assert.ok(withTimeContract("Welcome.", 5).includes("up to five minutes"))
+  assert.ok(withTimeContract("Welcome.", 2).includes("up to two minutes"))
+  assert.ok(withTimeContract("Welcome.", 1).includes("up to a minute"))
+  assert.ok(withTimeContract("Welcome.", 5).length <= 2_000)
 })
 
-test("the close check sees the validated window shape: last eight turns, USER/PANELIST labels", () => {
-  // The 39/39 offline validation ran against exactly this rendering; a
-  // silent change to labels or window size changes what the detector sees.
-  const turns = Array.from({ length: 10 }, (_, i) => ({
-    type: (i % 2 === 0 ? "panelist" : "user") as "panelist" | "user",
-    text: `turn ${i}`,
-  }))
-  const lines = closeCheckWindow(turns).split("\n")
-  assert.equal(lines.length, 8)
-  assert.equal(lines[0], "PANELIST: turn 2")
-  assert.equal(lines[7], "USER: turn 9")
+test("minutesPhrase reads like speech", () => {
+  assert.equal(minutesPhrase(1), "a minute")
+  assert.equal(minutesPhrase(2), "two minutes")
+  assert.equal(minutesPhrase(5), "five minutes")
+  assert.equal(minutesPhrase(7), "7 minutes")
 })

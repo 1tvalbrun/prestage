@@ -4,12 +4,14 @@ import {
   ROOM_MS,
   RESOLVE_MS,
   MIN_RECONNECT_MS,
-  CLOSE_LAND_GRACE_MS,
+  TIME_FINISH_GRACE_MS,
+  LAST_WORD_MAX_MS,
+  coldTimeUp,
   roomTimePhase,
   remainingMs,
   shouldInvite,
   maxDurationSec,
-  shouldLandAfterClose,
+  shouldLandOnTime,
   pickInvitation,
   INVITATIONS,
 } from "./roomClock.ts"
@@ -51,15 +53,43 @@ test("reconnect below the floor is refused with null", () => {
   assert.equal(maxDurationSec(T0, T0 + ROOM_MS + 1), null)
 })
 
-test("a delivered close lands the room only after the goodbye grace, never mid-speech", () => {
-  // No close on record: the clock rules alone.
-  assert.equal(shouldLandAfterClose(undefined, T0, false), false)
-  // Inside the grace the goodbye beat is still playing out.
-  assert.equal(shouldLandAfterClose(T0, T0 + CLOSE_LAND_GRACE_MS - 1, false), false)
-  // Grace passed but the persona is mid-sentence: hold.
-  assert.equal(shouldLandAfterClose(T0, T0 + CLOSE_LAND_GRACE_MS, true), false)
-  // Grace passed, room quiet: land.
-  assert.equal(shouldLandAfterClose(T0, T0 + CLOSE_LAND_GRACE_MS, false), true)
+test("time-up in a verdict lane keeps today's rule: resolving or over, and the persona quiet or the floor reached", () => {
+  assert.equal(shouldLandOnTime(ROOM_MS - RESOLVE_MS - 1, ROOM_MS, false), false)
+  assert.equal(shouldLandOnTime(ROOM_MS - RESOLVE_MS, ROOM_MS, false), true)
+  assert.equal(shouldLandOnTime(ROOM_MS - RESOLVE_MS, ROOM_MS, true), false)
+  assert.equal(shouldLandOnTime(ROOM_MS - 2_000, ROOM_MS, true), true)
+})
+
+test("a cold call's time-up lets the user finish, hands the persona the last word, and lands once it is spoken", () => {
+  const roomMs = 120_000
+  const T = 1_000_000
+  const at = (elapsed: number, rest: Partial<Parameters<typeof coldTimeUp>[0]> = {}) =>
+    coldTimeUp({
+      elapsed,
+      roomMs,
+      now: T + elapsed,
+      userSpeaking: false,
+      avatarSpeaking: false,
+      avatarSpokeAt: null,
+      lastWordAt: null,
+      ...rest,
+    })
+  assert.equal(at(roomMs - 1, { userSpeaking: true }), "open")
+  // Mid-thought at the buzzer: finish it, within the grace.
+  assert.equal(at(roomMs, { userSpeaking: true }), "finish")
+  assert.equal(at(roomMs + TIME_FINISH_GRACE_MS - 1, { userSpeaking: true }), "finish")
+  assert.equal(at(roomMs + TIME_FINISH_GRACE_MS, { userSpeaking: true }), "handOff")
+  // Quiet at the buzzer: the floor goes to the persona at once.
+  assert.equal(at(roomMs), "handOff")
+  // Waiting for the last word, then landing once it has been spoken.
+  const handed = T + roomMs
+  assert.equal(at(roomMs + 1_000, { lastWordAt: handed }), "lastWord")
+  assert.equal(at(roomMs + 3_000, { lastWordAt: handed, avatarSpokeAt: handed + 1_000, avatarSpeaking: true }), "lastWord")
+  assert.equal(at(roomMs + 6_000, { lastWordAt: handed, avatarSpokeAt: handed + 1_000 }), "land")
+  // Speech from before the hand-off is not the last word.
+  assert.equal(at(roomMs + 6_000, { lastWordAt: handed, avatarSpokeAt: handed - 1_000 }), "lastWord")
+  // No reply ever: the cap lands it.
+  assert.equal(at(roomMs + LAST_WORD_MAX_MS, { lastWordAt: handed }), "land")
 })
 
 test("invitations rotate by seed, name the persona, and contain no digits or em dashes", () => {

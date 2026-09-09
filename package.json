@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --test src/lib/*.test.ts src/domains/*.test.ts src/domains/*/*.test.ts",
+    "eval:signoff": "node --env-file=.env.local scripts/eval-signoff.ts",
     "render:pdf": "esbuild scripts/render-pdf-fixtures.tsx --bundle --platform=node --format=cjs --external:@react-pdf/renderer --outfile=.pdf-fixtures/render.cjs --log-level=error && node .pdf-fixtures/render.cjs"
   },
   "dependencies": {

@@ -2,7 +2,7 @@ import { v } from "convex/values"
 import { action, internalAction, internalMutation, query } from "./_generated/server"
 import { api, internal } from "./_generated/api"
 import { requireIdentity } from "./guard"
-import { getPack, isPackId } from "../src/domains/registry"
+import { getPack, isPackId, variantOf } from "../src/domains/registry"
 import { firstNameOf } from "../src/domains/types"
 import { endingContract, withTimeContract } from "../src/lib/ending"
 import { CONNECT_GRACE_SEC } from "../src/lib/roomClock"
@@ -136,6 +136,7 @@ export const mint = action({
       fetchStoredPersonality(apiKey, args.avatarId),
     ])
     if (!practice) return { ok: false, code: "unknown_avatar" }
+    const pack = getPack(practice.packId)
 
     // Claim before minting: every Runway session is billed, so a session
     // that has hit its connect cap, run out of room time, or errors
@@ -177,7 +178,6 @@ export const mint = action({
       })
     }
 
-    const pack = getPack(practice.packId)
     const briefing = pack.briefing({
       scope: practice.scope,
       audit: practice.audit
@@ -191,7 +191,13 @@ export const mint = action({
     // Floor, not round: a ninety second reconnect briefed as "two minutes"
     // overpromises; understating by up to a minute is the safe direction.
     const roomMinutes = Math.max(1, Math.floor(claim.maxDurationSec / 60))
-    const contract = endingContract(firstNameOf(session.persona.name), roomMinutes)
+    // A room without a closing read (a cold call) gets no ending contract
+    // and no spoken time promise: the prospect never "calls time", the
+    // clock does. The pack's briefing carries that variant's own rules.
+    const { closingRead } = variantOf(pack, practice.scope)
+    const contract = closingRead
+      ? endingContract(firstNameOf(session.persona.name), roomMinutes)
+      : ""
     let personality: string | undefined
     if (storedPersonality) {
       const base = `${pack.turnTaking}${briefing.personalityPreamble}${storedPersonality}`
@@ -229,7 +235,9 @@ export const mint = action({
         // Replaces the Character's canned opener, which otherwise repeats
         // verbatim every session, including resumes. The time contract makes
         // the wind-down a promise kept instead of a surprise.
-        startScript: withTimeContract(briefing.startScript),
+        startScript: closingRead
+          ? withTimeContract(briefing.startScript, roomMinutes)
+          : briefing.startScript,
         // No tools: the ending client_event tools were removed 2026-08-25
         // after a confirmed agent wedge on tool-call turns. Ending authority
         // is server clock + speech grace + idle only.
