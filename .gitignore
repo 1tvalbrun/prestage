@@ -46,3 +46,7 @@ next-env.d.ts
 
 # source reference material (copyrighted standards, SME docs) - never committed
 /docs/reference/
+
+# impeccable outputs regenerated from DESIGN.md and critique runs; keep only the live config
+/.impeccable/design.json
+/.impeccable/critique/
