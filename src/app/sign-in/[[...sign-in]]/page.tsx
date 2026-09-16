@@ -6,7 +6,7 @@ import { BrandName } from "@/components/shared/BrandName"
 import { SignInFlow } from "@/components/auth/SignInFlow"
 import { cn } from "@/lib/utils"
 
-const PANELISTS = [
+const COUNTERPARTS = [
   { role: "Pitch · the investor", quote: "“Walk me through the number you’re afraid of.”" },
   { role: "Sale · the buyer", quote: "“I’m fine with what we have. Change my mind.”" },
   { role: "Audit · the assessor", quote: "“Show me the control working, not the policy.”" },
@@ -32,17 +32,17 @@ const SignInPage = () => (
           </span>
         </p>
         <h1 className="max-w-[720px] text-[34px] font-semibold leading-[1.08] tracking-[-.02em] lg:text-[48px]">
-          Face the panel before the stage.
+          The interview before the interview.
         </h1>
         <p className="max-w-[600px] text-[15.5px] leading-[1.5] text-on-surface-2">
-          Run the room live against an AI panel that pushes back. Walk out knowing what went
-          well, what did not, and what to do next.
+          Run the room live against a photoreal counterpart who has read your materials and
+          pushes back. Walk out knowing what went well, what did not, and what to do next.
         </p>
 
         <ul className="flex flex-col gap-2.5">
-          {PANELISTS.map((panelist, i) => (
+          {COUNTERPARTS.map((counterpart, i) => (
             <li
-              key={panelist.role}
+              key={counterpart.role}
               className={cn(
                 "items-center gap-4 rounded-[14px] border border-line bg-surface p-4",
                 i === 0 ? "flex" : "hidden lg:flex"
@@ -56,10 +56,10 @@ const SignInPage = () => (
               </span>
               <span className="flex flex-col gap-0.5">
                 <span className="font-mono text-[10px] uppercase tracking-[.09em] text-on-surface-3">
-                  {panelist.role}
+                  {counterpart.role}
                 </span>
                 <span className="font-serif text-[15px] italic leading-[1.4]">
-                  {panelist.quote}
+                  {counterpart.quote}
                 </span>
               </span>
             </li>
@@ -71,7 +71,7 @@ const SignInPage = () => (
       </div>
 
       <p className="hidden font-mono text-[10px] uppercase tracking-[.09em] text-ink-4 lg:block">
-        Prestage · a live panel stress test · invited testing
+        Prestage · live rehearsal under real pressure · invited testing
       </p>
       </div>
     </section>

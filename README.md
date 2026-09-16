@@ -16,7 +16,7 @@ Four lanes, each a domain pack with its own intake, prep, personas, and debrief:
 1. **Brief**: type it or talk it. A spoken brief is transcribed and shaped into the lane's fields; only what you actually said fills in.
 2. **Read**: materials are extracted with page, slide, and sheet markers so every later claim can cite its source.
 3. **Pre-read** or **Blueprint**: the audit lanes separate what your materials support from what they only assert, and show the gap map. Add a document and the audit re-runs on the full set, marking the gaps it closed. The interview lane builds its plan and asks its clarifying questions.
-4. **Panel**: meet or choose your counterpart, and run a quick mic and noise check.
+4. **Counterpart**: meet or choose who you face, and run a quick mic and noise check.
 5. **Room**: a live conversation with a Runway Character that hears you and pushes back in its own voice. It ends the way a real one does, when someone signs off, or when the time is up.
 6. **Debrief**: what held, what did not, and your to-dos, with the counterpart's spoken verdict. No scores.
 

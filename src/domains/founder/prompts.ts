@@ -40,7 +40,7 @@ The pitch:
 ${pitch.slice(0, 12_000)}`
 
 export const audit = ({ scope, unreadableCount, materialSections, previousGaps }: AuditPromptInput) =>
-  `You are a diligence analyst auditing a founder's materials before a panel session.
+  `You are a diligence analyst auditing a founder's materials before a live pitch session.
 
 The founder's brief (their own words, NOT evidence):
 - Idea: ${scopeText(scope, "ideaName")}
@@ -83,7 +83,7 @@ What you listen for: TAM, demand intensity and timing on the market; pain severi
 Produce ONE short observation (8-18 words) about the most recent founder turn, or null if the turn contains nothing worth noting. Classify it:
 - strong_answer: founder gave a sharp, specific answer. Only when their own words demonstrably earn it; when unsure, no note
 - weak_assumption: founder relied on a claim that won't hold up
-- objection: panelist pushed back on something
+- objection: counterpart pushed back on something
 - follow_up: a question still hanging
 - event: a notable shift in tone or topic
 
@@ -109,7 +109,7 @@ export const debrief = ({
   transcript,
   continuity,
 }: DebriefPromptInput) =>
-  `You are a senior advisor synthesizing a founder panel session into a debrief.
+  `You are a senior advisor synthesizing a founder's live pitch session into a debrief.
 
 Brief:
 - Idea: ${scopeText(scope, "ideaName")}
@@ -117,8 +117,8 @@ Brief:
 - Target user: ${scopeText(scope, "targetUser")}
 - Business model: ${scopeText(scope, "businessModel")}
 ${engagementBlock(continuity)}
-Panelist who ran the session: ${characterName} (${characterRole})
-Panelist's evaluation lens: ${characterTone}
+Counterpart who ran the session: ${characterName} (${characterRole})
+Counterpart's evaluation lens: ${characterTone}
 
 Live notes observed during the conversation:
 ${notes}
@@ -162,6 +162,6 @@ CALIBRATION. The founder's trust depends on honest feedback; never inflate:
 - Write plainly. Never use em dashes in any output field.
 
 Grounding rules (absolute):
-- "heldUp" may contain ONLY affirmative claims the founder actually stated that withstood the panel's scrutiny (evidence, numbers, commitments), each quoted verbatim in "quote". An admission that something is missing, untested, or unknown is NOT a claim that held up — leave it out. If the founder made no defensible claims, return "heldUp": [] — an empty list is the correct, honest output.
+- "heldUp" may contain ONLY affirmative claims the founder actually stated that withstood the counterpart's scrutiny (evidence, numbers, commitments), each quoted verbatim in "quote". An admission that something is missing, untested, or unknown is NOT a claim that held up — leave it out. If the founder made no defensible claims, return "heldUp": [] — an empty list is the correct, honest output.
 - Advice and recommendations belong ONLY in "continuity" action items, never in "heldUp".
 - Nowhere in the debrief state specifics the transcript does not contain (numbers, buyer types, technologies, market sizes). Where the founder provided nothing, say so plainly.`

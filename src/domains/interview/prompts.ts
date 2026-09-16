@@ -53,7 +53,7 @@ What they said:
 ${pitch.slice(0, 12_000)}`
 
 export const blueprint = ({ scope, unreadableCount, materialSections }: BlueprintPromptInput) =>
-  `You are the interview panel's preparer, building a role-specific interview blueprint before a live practice interview. The interviewer will work from this vetted plan instead of improvising domain facts live.
+  `You are the interviewer's preparer, building a role-specific interview blueprint before a live practice interview. The interviewer will work from this vetted plan instead of improvising domain facts live.
 
 The candidate's scope (their own words):
 ${scopeBlock(scope)}

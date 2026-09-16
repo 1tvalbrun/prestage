@@ -59,4 +59,4 @@ export const withTimeContract = (startScript: string, minutes: number): string =
 // Appended to the debrief system prompt (spec: Report as Safety Net) so the
 // written verdict never contradicts a close the user already heard.
 export const VERDICT_RESTATE_DIRECTIVE = `
-If the transcript ends with the panelist delivering a closing verdict, your spokenVerdict and verdictSummary must restate that same close in the same spirit. Do not compose a rival verdict that contradicts what was said aloud.`
+If the transcript ends with the counterpart delivering a closing verdict, your spokenVerdict and verdictSummary must restate that same close in the same spirit. Do not compose a rival verdict that contradicts what was said aloud.`

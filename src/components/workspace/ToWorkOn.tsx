@@ -172,7 +172,7 @@ export const ToWorkOn = ({
       <div className="overflow-hidden rounded-xl border border-line bg-surface-raised shadow-card">
         {openListRows.length === 0 ? (
           <p className="px-4 py-3 text-[13px] text-on-surface-3">
-            Nothing outstanding — {personaFirst ?? "your panelist"} has no follow-ups waiting.
+            Nothing outstanding — {personaFirst ?? "your counterpart"} has no follow-ups waiting.
           </p>
         ) : (
           openListRows.map((item) => {

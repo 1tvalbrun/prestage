@@ -156,7 +156,7 @@ export const TITLE = StyleSheet.create({
   metaSep: { color: INK_4 },
 })
 
-// A part with a prefix keeps it inside one segment ("Panelist Marcus Webb"),
+// A part with a prefix keeps it inside one segment ("Counterpart Marcus Webb"),
 // so the dot separator only lands between parts.
 type MetaPart = string | { prefix?: string; strong: string }
 

@@ -55,7 +55,7 @@ export const INTERVIEWER_PERSONAS: Persona[] = [
       { text: "scenarios and trade-offs", strong: true },
       { text: ": concrete situations, your reasoning under pressure, and the why behind each call." },
     ],
-    bio: "The panelist who's done the work. Doesn't quiz on trivia — puts you in a situation from the role and keeps asking why until it's clear whether you've actually been there.",
+    bio: "The interviewer who's done the work. Doesn't quiz on trivia — puts you in a situation from the role and keeps asking why until it's clear whether you've actually been there.",
     tags: ["Technical depth", "Trade-offs", "Scenarios"],
     signature: "Let's get concrete. Walk me through exactly how you'd handle this one.",
   },

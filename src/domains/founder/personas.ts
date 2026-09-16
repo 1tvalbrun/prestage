@@ -1,6 +1,6 @@
 import type { Persona } from "../types.ts"
 
-// The founder lane's panel. Persona text feeds UI labels and the
+// The founder lane's counterparts. Persona text feeds UI labels and the
 // orchestrate/debrief prompts; the server resolves personas from the pack,
 // so the client can never inject one. The Runway avatar id for each persona
 // lives in the Convex avatars registry.

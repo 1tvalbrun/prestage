@@ -142,7 +142,7 @@ export const POST = async (req: NextRequest) => {
     })
     if (sawQueued) {
       return NextResponse.json(
-        { error: "All panelists are in session.", code: "queued" },
+        { error: "All counterparts are in session.", code: "queued" },
         { status: 503 }
       )
     }

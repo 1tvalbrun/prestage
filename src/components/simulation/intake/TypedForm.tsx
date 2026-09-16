@@ -73,8 +73,8 @@ export const TypedForm = ({
   const scopeFromUpload = useAction(api.ingest.scopeFromUpload)
   const formScroll = useAutoHideScrollbar<HTMLDivElement>()
   const railScroll = useAutoHideScrollbar<HTMLElement>()
-  const panelist = lockedPersona(pack, variant)
-  const cta = intakeCta(pack, variant, panelist)
+  const counterpart = lockedPersona(pack, variant)
+  const cta = intakeCta(pack, variant, counterpart)
   const fieldsByKey = new Map(variant.scopeFields.map((field) => [field.key, field]))
 
   // Autofill synchronizes with the upload transport: each upload that
@@ -149,7 +149,7 @@ export const TypedForm = ({
                   {pack.copy.form.materialsPrompt}
                 </span>
                 <span className="text-[12px] text-on-surface-3">
-                  {panelist ? `${firstNameOf(panelist.name)} reads` : "Your panel reads"}{" "}
+                  {counterpart ? `${firstNameOf(counterpart.name)} reads` : "Your counterpart reads"}{" "}
                   everything before the session and fills in what it can below.
                 </span>
                 <input
