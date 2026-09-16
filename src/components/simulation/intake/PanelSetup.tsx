@@ -20,7 +20,7 @@ import type { MicCheckResult } from "@/lib/micCheck"
 
 // An honest recommendation: the persona whose declared territory (tags +
 // attack line) overlaps the thing the user asked to have challenged. No
-// match, no invented reason — the first panelist with a generic pill.
+// match, no invented reason — the first counterpart with a generic pill.
 const recommendPersona = (
   pack: DomainPack,
   scope: Scope,
@@ -131,14 +131,14 @@ export const PanelSetup = ({ simulationId }: PanelSetupProps) => {
   if (practice === null) return <IdeaNotFound />
   const pack = getPack(practice.packId)
   const variant = variantOf(pack, practice.scope)
-  const panelist = lockedPersona(pack, variant)
+  const counterpart = lockedPersona(pack, variant)
 
   if (variant.prep && !practice.context) {
     return (
       <div>
         <StageKicker>{pack.copy.panel.kicker}</StageKicker>
         <p className="text-[13.5px] text-on-surface-2">
-          Your brief is still being read. The panel needs it before the questions start.{" "}
+          Your brief is still being read. Your counterpart needs it before the questions start.{" "}
           <Link
             href={`/simulation/${simulationId}/analyze`}
             className="focus-ring underline hover:text-accent-blue"
@@ -176,7 +176,7 @@ export const PanelSetup = ({ simulationId }: PanelSetupProps) => {
   const docChips = (materials ?? []).map((material) => material.name)
   const recommended = recommendPersona(pack, practice.scope, practice.personaId ?? null)
   const readLine = variant.prep
-    ? `${panelist ? `${firstNameOf(panelist.name)} has` : "They've all"} read your brief${docChips.length > 0 ? " and your documents" : ""}. `
+    ? `${counterpart ? `${firstNameOf(counterpart.name)} has` : "They've all"} read your brief${docChips.length > 0 ? " and your documents" : ""}. `
     : ""
 
   return (
@@ -188,11 +188,11 @@ export const PanelSetup = ({ simulationId }: PanelSetupProps) => {
       </p>
 
       <MicCheck
-        panelistFirstName={panelist ? firstNameOf(panelist.name) : null}
+        counterpartFirstName={counterpart ? firstNameOf(counterpart.name) : null}
         onResult={setMicCheck}
       />
 
-      {panelist === null ? (
+      {counterpart === null ? (
         <div className="grid grid-cols-3 items-stretch gap-4 text-left max-lg:mx-auto max-lg:max-w-[440px] max-lg:grid-cols-1">
           {pack.personas.map((persona) => {
             const isRecommended = persona.id === recommended.persona.id
@@ -253,7 +253,7 @@ export const PanelSetup = ({ simulationId }: PanelSetupProps) => {
         <div className="mx-auto max-w-[660px] overflow-hidden rounded-2xl border border-line bg-surface-raised text-left shadow-card">
           <div className="flex gap-6 p-7 pb-5 max-md:flex-col max-md:p-5 max-md:pb-4">
             <PortraitTile
-              persona={panelist}
+              persona={counterpart}
               className="h-24 w-24 flex-none rounded-xl max-md:h-40 max-md:w-full"
             />
             <div className="min-w-0 flex-1">
@@ -263,18 +263,18 @@ export const PanelSetup = ({ simulationId }: PanelSetupProps) => {
                   scopeText(practice.scope, pack.sessionMetaField) &&
                   ` · ${scopeText(practice.scope, pack.sessionMetaField)}`}
               </p>
-              <p className="text-[19px] font-semibold tracking-[-.015em]">{panelist.name}</p>
-              <p className="mb-2.5 mt-0.5 text-[13px] text-on-surface-3">{panelist.role}</p>
-              <AttackLine persona={panelist} />
+              <p className="text-[19px] font-semibold tracking-[-.015em]">{counterpart.name}</p>
+              <p className="mb-2.5 mt-0.5 text-[13px] text-on-surface-3">{counterpart.role}</p>
+              <AttackLine persona={counterpart} />
               <p className="mt-3 font-serif text-[15px] italic leading-normal text-on-surface-2">
-                &ldquo;{panelist.signature}&rdquo;
+                &ldquo;{counterpart.signature}&rdquo;
               </p>
             </div>
           </div>
           {variant.prep && (
             <div className="flex flex-wrap items-center gap-2 border-t border-line bg-surface px-7 py-3.5 max-md:px-5">
               <span className="text-xs text-on-surface-3">
-                {firstNameOf(panelist.name)}&apos;s read:
+                {firstNameOf(counterpart.name)}&apos;s read:
               </span>
               <ReceiptChip label="Your brief" />
               {docChips.map((name) => (
@@ -286,7 +286,7 @@ export const PanelSetup = ({ simulationId }: PanelSetupProps) => {
           <div className="flex flex-wrap items-center gap-3.5 border-t border-line px-7 py-4 max-md:px-5">
             <button
               type="button"
-              onClick={() => handleEnterRoom(panelist.id)}
+              onClick={() => handleEnterRoom(counterpart.id)}
               disabled={startingId !== null}
               className={BTN_PRIMARY}
             >
@@ -298,7 +298,7 @@ export const PanelSetup = ({ simulationId }: PanelSetupProps) => {
         </div>
       )}
 
-      {panelist === null && (
+      {counterpart === null && (
         <p className="mt-7 flex flex-wrap items-center justify-center gap-2 text-[12.5px] text-on-surface-3">
           They&apos;ve all read:
           <ReceiptChip label="Your brief" />

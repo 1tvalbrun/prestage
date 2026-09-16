@@ -128,7 +128,7 @@ export const sessionDebrief = ({
         <>
           <SectionLabel
             title="Verify before the real thing"
-            hint="facts the panelist couldn't vouch for"
+            hint="facts your counterpart couldn't vouch for"
           />
           {verifyItems.map((item, i) => (
             <View key={i} style={[ROW.divided, ...(i === 0 ? [ROW.first] : [])]} wrap={false}>

@@ -19,7 +19,7 @@ export const CONNECT_GRACE_SEC = 90
 export const TIME_FINISH_GRACE_MS = 8_000
 export const LAST_WORD_MAX_MS = 12_000
 // The wind-down line for a room without a closing read; the invitations
-// presume a panelist with a read to deliver.
+// presume a counterpart with a read to deliver.
 export const COLD_CALL_CUE = "Wrap it up. Ask for the next step."
 
 const CLOSING_FRACTION = 0.8

@@ -53,7 +53,7 @@ export const interviewPack: DomainPack = {
   shortLabel: "Interview",
   startCta: "Start an interview practice",
   description:
-    "Face the interview before the real one. The panel builds a role-specific blueprint from your role and materials, interviews you live from that plan, then debriefs on what held up.",
+    "Face the interview before the real one. Your interviewer builds a role-specific blueprint from your role and materials, interviews you live from that plan, then debriefs on what held up.",
   subjectField: "roleTitle",
   subtitleFields: ["seniority", "interviewType"],
   userLabel: "CANDIDATE",

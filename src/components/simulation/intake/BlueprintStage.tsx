@@ -296,7 +296,7 @@ export const BlueprintStage = ({ simulationId }: BlueprintStageProps) => {
           href={`/simulation/${simulationId}/panel`}
           className={locked || !hasEdits ? BTN_PRIMARY : BTN_SECONDARY}
         >
-          {locked ? "To the panel" : copy.cta} <span aria-hidden="true">→</span>
+          {locked ? "Choose your interviewer" : copy.cta} <span aria-hidden="true">→</span>
         </Link>
         <span className="text-[12.5px] text-on-surface-3">
           {locked

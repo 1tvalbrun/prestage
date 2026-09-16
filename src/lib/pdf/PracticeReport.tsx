@@ -85,7 +85,7 @@ export const practiceReport = ({
       <Meta
         parts={[
           laneLabel,
-          ...(personaName ? [{ prefix: "Panelist", strong: personaName }] : []),
+          ...(personaName ? [{ prefix: "Counterpart", strong: personaName }] : []),
           `${sessions.length} ${sessions.length === 1 ? "session" : "sessions"}`,
         ]}
       />

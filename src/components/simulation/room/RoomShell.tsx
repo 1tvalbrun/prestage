@@ -367,7 +367,7 @@ const RoomShellBody = ({
   const roomMs = session.roomMs ?? ROOM_MS
   const closingRead = practice ? variantOf(pack, practice.scope).closingRead : true
   const phase = roomStartedAt ? roomTimePhase(roomStartedAt, now, roomMs) : "open"
-  // The closing invitation presumes a panelist with a read to deliver.
+  // The closing invitation presumes a counterpart with a read to deliver.
   const invitation =
     roomStartedAt && closingRead && shouldInvite(roomStartedAt, now, roomMs) && !isAvatarSpeaking
       ? pickInvitation(session._creationTime, firstNameOf(session.persona.name))
@@ -572,7 +572,7 @@ const RoomShellBody = ({
 
   const failureHeadline =
     connectCode === "queued"
-      ? "All panelists are in session"
+      ? "All counterparts are in session"
       : neverJoined && connectCode !== "cap" && connectCode !== "complete"
         ? `${persona.name} couldn't join the room`
         : `${persona.name} isn't responding`
@@ -1194,7 +1194,7 @@ export const RoomShell = ({ simulationId, onSettled }: RoomShellProps) => {
   )
 
   // No live session for this practice means the user hasn't chosen a
-  // panelist (or the session concluded) — send them to the meet step.
+  // counterpart (or the session concluded) — send them to the meet step.
   // The end-session path guards with endedRef.current so its own navigation
   // isn't raced by this redirect.
   useEffect(() => {

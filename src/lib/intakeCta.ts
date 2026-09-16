@@ -5,16 +5,16 @@ export type IntakeCta = { label: string; hint: string }
 
 // The brief's submit button names the beat it starts. With prep that beat
 // is the read, and meeting anyone comes two steps later, so the pack's
-// copy speaks; without prep the panel step is next and the locked
-// panelist is who the user is about to face.
+// copy speaks; without prep the counterpart step is next and the locked
+// counterpart is who the user is about to face.
 export const intakeCta = (
   pack: DomainPack,
   variant: PracticeVariant,
-  panelist: Persona | null
+  counterpart: Persona | null
 ): IntakeCta => {
   if (variant.prep) return pack.prep.start
-  if (!panelist) return { label: "Choose your panel", hint: "You pick who to face next." }
-  const first = firstNameOf(panelist.name)
+  if (!counterpart) return { label: "Choose your counterpart", hint: "You pick who to face next." }
+  const first = firstNameOf(counterpart.name)
   return { label: `Meet ${first}`, hint: `${first} knows nothing about you until you speak.` }
 }
 

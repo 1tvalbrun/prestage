@@ -33,7 +33,7 @@ export const founderPack: DomainPack = {
   shortLabel: "Founder",
   startCta: "Start a pitch practice",
   description:
-    "Face an investor panel before the real one. Your idea gets read, audited, and interrogated live, then debriefed.",
+    "Face the pitch before the real one. Your idea gets read, audited, and interrogated live by a photoreal counterpart, then debriefed.",
   subjectField: "ideaName",
   subtitleFields: ["stage", "businessModel"],
   userLabel: "FOUNDER",
@@ -99,11 +99,11 @@ export const founderPack: DomainPack = {
     stepLabel: "Pre-read",
     start: {
       label: "Run the pre-read",
-      hint: "Your panel reads everything first. You choose who to face after.",
+      hint: "Your counterpart reads everything first. You choose who to face after.",
     },
     prompt: audit,
     wait: {
-      kicker: "The audit · before the panel pushes",
+      kicker: "The audit · before your counterpart pushes",
       heading: (subject) => `Reading ${subject} against a diligence framework.`,
       lead: "We check every claim for backing, and note everything a real diligencer would ask for.",
       rows: [
@@ -124,31 +124,31 @@ export const founderPack: DomainPack = {
       ticker: [
         "Every claim has to trace to a source.",
         "If it can’t be cited, it becomes a gap.",
-        "Gaps are what the panel presses on first.",
+        "Gaps are what your counterpart presses on first.",
         "This is the read before a single question.",
       ],
       stepMs: 2000,
     },
     copy: {
-      kicker: "The audit · before the panel pushes",
+      kicker: "The audit · before your counterpart pushes",
       readyHeading: "Here's what we found, and what's missing.",
       readyLead:
-        "Read straight from your materials before a single question. Every gap below is something a real diligencer will find. The panel presses on the red ones first.",
-      zeroClaims: "That's the finding: the panel will treat everything as unproven.",
-      cta: "Take it to the panel",
+        "Read straight from your materials before a single question. Every gap below is something a real diligencer will find. Your counterpart presses on the red ones first.",
+      zeroClaims: "That's the finding: your counterpart will treat everything as unproven.",
+      cta: "Choose who to face",
     },
   },
   copy: {
     tellIt: {
       heading: "What are you building?",
-      sub: "Pitch it like the panel is already across the table: the problem, the customer, the ask. It gets shaped into a brief you'll confirm.",
+      sub: "Pitch it like your counterpart is already across the table: the problem, the customer, the ask. It gets shaped into a brief you'll confirm.",
     },
     form: {
       sections: [
         { title: "The idea", keys: ["ideaName", "description", "whyNow"] },
         {
           title: "Context",
-          meta: "optional · helps your panel calibrate",
+          meta: "optional · helps your counterpart calibrate",
           keys: ["stage", "businessModel", "targetUser", "focusAreas"],
         },
       ],
@@ -157,7 +157,7 @@ export const founderPack: DomainPack = {
       materialsPrompt: "Add your deck or one-pager.",
     },
     preview: {
-      title: "What your panel will read",
+      title: "What your counterpart will read",
       rows: [
         { key: "ideaName", label: "The idea", hint: "Not yet named" },
         {
@@ -173,7 +173,7 @@ export const founderPack: DomainPack = {
     readWait: {
       kicker: "Reading your brief",
       heading: () => "Going through what you gave us.",
-      lead: "The panel's analyst reads every line before a single question. This takes a few seconds.",
+      lead: "The analyst reads every line before a single question. This takes a few seconds.",
       rows: [
         { label: "Idea name", text: "Registering what you’re building…" },
         { label: "What it is", text: "Reading the shape of the product…" },
@@ -193,7 +193,7 @@ export const founderPack: DomainPack = {
         "We only work with what you actually gave us.",
         "Nothing gets invented. If we didn’t catch it, we ask.",
         "A gap is a finding, not a failure.",
-        "The panel reads this before you walk in.",
+        "Your counterpart reads this before you walk in.",
       ],
       stepMs: 1250,
     },

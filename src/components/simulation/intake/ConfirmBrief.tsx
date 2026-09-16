@@ -43,8 +43,8 @@ export const ConfirmBrief = ({
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [missing, setMissing] = useState<string[]>([])
 
-  const panelist = lockedPersona(pack, variant)
-  const cta = intakeCta(pack, variant, panelist)
+  const counterpart = lockedPersona(pack, variant)
+  const cta = intakeCta(pack, variant, counterpart)
   // The chooser already answered the variant field; confirming it again
   // reads as a second question.
   const fields = variant.scopeFields.filter((field) => field.key !== pack.variantField)
@@ -157,9 +157,9 @@ export const ConfirmBrief = ({
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
         <span className="text-[12.5px] text-on-surface-3">
-          {panelist
-            ? `${firstNameOf(panelist.name)} reads these before the session:`
-            : "Your panel reads these before the session:"}
+          {counterpart
+            ? `${firstNameOf(counterpart.name)} reads these before the session:`
+            : "Your counterpart reads these before the session:"}
         </span>
         <label className="focus-ring inline-flex cursor-pointer items-center gap-1.5 rounded-full border border-dashed border-line-2 px-3 py-1 text-xs text-on-surface-3 transition-colors hover:bg-surface-2 hover:text-accent-blue">
           <Upload className="size-[11px]" />

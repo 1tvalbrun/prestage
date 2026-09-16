@@ -6,7 +6,7 @@ import { CALL_TYPE_KEY, COLD_CALL, PITCH_MEETING } from "../domains/sales/varian
 import type { Scope } from "../domains/types.ts"
 
 // The button must name where submitting goes. Every lane with prep goes to
-// the read first, whoever it locks; only the cold call meets its panelist
+// the read first, whoever it locks; only the cold call meets its counterpart
 // next.
 
 const ctaFor = (packId: string, scope: Scope = {}) => {
@@ -15,7 +15,7 @@ const ctaFor = (packId: string, scope: Scope = {}) => {
   return intakeCta(pack, variant, lockedPersona(pack, variant))
 }
 
-test("founder: the pre-read comes before the panel choice", () => {
+test("founder: the pre-read comes before the counterpart choice", () => {
   const cta = ctaFor("founder")
   assert.equal(cta.label, "Run the pre-read")
   assert.match(cta.hint, /choose who to face after/)
@@ -50,7 +50,7 @@ test("no lane's button says meet someone while prep stands between", () => {
     const variant = variantOf(pack, {})
     if (!variant.prep) continue
     const cta = intakeCta(pack, variant, lockedPersona(pack, variant))
-    assert.doesNotMatch(cta.label, /^Meet |Choose your panel/, pack.id)
+    assert.doesNotMatch(cta.label, /^Meet |Choose your counterpart/, pack.id)
   }
 })
 

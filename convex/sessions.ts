@@ -72,7 +72,7 @@ export const insertSessionForPersona = async (
     .query("avatars")
     .withIndex("by_pack_persona", (q) => q.eq("packId", pack.id).eq("personaId", persona.id))
     .first()
-  if (!avatar) throw new Error("No avatar registered for this panelist")
+  if (!avatar) throw new Error("No avatar registered for this counterpart")
   const sessionId = await ctx.db.insert("sessions", {
     practiceId: practice._id,
     userId: practice.userId,

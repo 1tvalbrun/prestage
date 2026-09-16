@@ -15,7 +15,7 @@ export const flowSteps = (pack: DomainPack | null, scope: Scope): FlowStep[] => 
   return [
     { label: "Brief", keys: ["brief"] },
     ...prep,
-    { label: "Panel", keys: ["panel"] },
+    { label: "Counterpart", keys: ["panel"] },
     { label: "Room", keys: ["room"] },
   ]
 }

@@ -15,12 +15,12 @@ type CheckState =
   | { kind: "failed"; failure: MicFailure }
 
 type MicCheckProps = {
-  // Null when the panel offers a choice of panelists.
-  panelistFirstName: string | null
+  // Null when the counterpart stage offers a choice.
+  counterpartFirstName: string | null
   onResult: (result: MicCheckResult) => void
 }
 
-// The name never opens a sentence, so the "your panelist" fallback reads
+// The name never opens a sentence, so the "your counterpart" fallback reads
 // correctly without capitalization logic.
 const VERDICT_COPY: Record<MicVerdict, (who: string) => string> = {
   good: () => "Good to go. Quiet room, clear voice.",
@@ -59,10 +59,10 @@ const VerdictIcon = ({ verdict }: { verdict: MicVerdict }) => {
 // The pre-room mic check: one card, rendered from one state. Advisory on
 // purpose; "Enter the room" never depends on it. The first click is also
 // the browser's permission gesture, so the prompt never costs room time.
-export const MicCheck = ({ panelistFirstName, onResult }: MicCheckProps) => {
+export const MicCheck = ({ counterpartFirstName, onResult }: MicCheckProps) => {
   const [state, setState] = useState<CheckState>({ kind: "idle" })
   const abortRef = useRef<AbortController | null>(null)
-  const who = panelistFirstName ?? "your panelist"
+  const who = counterpartFirstName ?? "your counterpart"
 
   // The capture is the external system: leaving the page mid-check must
   // release the mic.

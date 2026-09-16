@@ -220,7 +220,7 @@ const PracticePage = ({ params }: { params: Promise<{ practiceId: string }> }) =
                 </h2>
               </div>
               <div className="rounded-xl border border-dashed border-line-2 px-5 py-8 text-center text-[13px] text-on-surface-3">
-                No sessions yet. Hit Continue to face {personaFirst ?? "your panelist"} for the
+                No sessions yet. Hit Continue to face {personaFirst ?? "your counterpart"} for the
                 first time.
               </div>
             </>

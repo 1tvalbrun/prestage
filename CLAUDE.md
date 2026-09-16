@@ -1,11 +1,15 @@
 # Prestage — Project Context
 
 ## What This Is
-An AI panel stress test. A founder pitches an idea and is interrogated live
-by one of three Runway avatar characters (VC, Target Customer, Technical
-Architect), chosen at the Panel stage. Flow: Brief → Read → Audit → Panel →
-Room → Verdict, ending in a debrief report (qualitative feedback, what
-didn't hold, to-dos — no numeric scoring) with the panelist's spoken verdict.
+The interview before the interview. A user brings a pitch, a sale, an audit,
+or a job interview (four lanes) and is interrogated live by a photoreal
+counterpart, a Runway avatar character chosen or met at the Counterpart
+stage. Flow: Brief → Read → Audit → Counterpart → Room → Verdict, ending in a
+debrief (qualitative feedback, what didn't hold, to-dos — no numeric scoring)
+with the counterpart's spoken verdict. The word is "counterpart" everywhere
+the lane is unknown; lane copy uses the role (investor, buyer, prospect,
+assessor, interviewer). "Panel" and "panelist" survive only as internal keys
+(the /panel route, the transcript speaker type).
 Stage keys and route names differ (read → /analyze, verdict → /report); the
 mapping lives in src/components/simulation/flow/FlowShell.tsx.
 
@@ -24,7 +28,7 @@ Use CSS custom properties: var(--color-primary), var(--font-display) etc.
   and OPENAI_MODEL_QUALITY (audit, report) override it — set them in the
   Convex deployment env, which actions read (not .env.local)
 - Runway GWM Avatars: one AvatarProvider session per room (1-on-1 with the
-  chosen panelist); avatar personality lives on the Runway Character, with
+  chosen counterpart); avatar personality lives on the Runway Character, with
   per-session personality/startScript overrides from /api/avatar/connect
 - Clerk auth, invite-only (Restricted mode): Google + email sign-in. Every
   public Convex function calls requireIdentity (convex/guard.ts); Next
@@ -48,6 +52,8 @@ conventions on top of those:
 - All external API calls in /convex/ actions or /api/ route handlers only
 
 ## Do Not
+- Call the product Prestage Prep. The domain is prestageprep.ai; the name is
+  Prestage
 - Create tailwind.config.ts (Tailwind v4 uses CSS-first config)
 - Add a public Convex function or API route without an identity check
 - Leave TODOs or placeholders
