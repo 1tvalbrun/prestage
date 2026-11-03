@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
 import { useAction } from "convex/react"
 import { api } from "@convex/_generated/api"
 import type { DomainPack, PracticeVariant, Scope, ScopeField } from "@/domains/types"
-import { lockedPersona } from "@/domains/registry"
+import { lockedArchetype } from "@/domains/registry"
 import type { IntakeFormAction, IntakeFormState } from "@/lib/intakeForm"
 import { intakeCta } from "@/lib/intakeCta"
 import { BTN_PRIMARY } from "@/components/shared/buttons"
@@ -14,7 +14,6 @@ import { ScopeFields } from "./ScopeFields"
 import { BriefPreview, EvidenceRail } from "./BriefPreview"
 import { UploadList, useMaterialUploads } from "./materialUploads"
 import { useAutoHideScrollbar } from "@/components/shared/useAutoHideScrollbar"
-import { firstNameOf } from "@/domains/types"
 
 export const missingRequired = (fields: ScopeField[], scope: Scope): string[] =>
   fields
@@ -73,8 +72,8 @@ export const TypedForm = ({
   const scopeFromUpload = useAction(api.ingest.scopeFromUpload)
   const formScroll = useAutoHideScrollbar<HTMLDivElement>()
   const railScroll = useAutoHideScrollbar<HTMLElement>()
-  const counterpart = lockedPersona(pack, variant)
-  const cta = intakeCta(pack, variant, counterpart)
+  const locked = lockedArchetype(pack, variant)
+  const cta = intakeCta(pack, variant, locked)
   const fieldsByKey = new Map(variant.scopeFields.map((field) => [field.key, field]))
 
   // Autofill synchronizes with the upload transport: each upload that
@@ -149,8 +148,8 @@ export const TypedForm = ({
                   {pack.copy.form.materialsPrompt}
                 </span>
                 <span className="text-[12px] text-on-surface-3">
-                  {counterpart ? `${firstNameOf(counterpart.name)} reads` : "Your counterpart reads"}{" "}
-                  everything before the session and fills in what it can below.
+                  Your counterpart reads everything before the session and fills in what it can
+                  below.
                 </span>
                 <input
                   type="file"

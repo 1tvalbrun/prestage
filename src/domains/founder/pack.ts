@@ -1,5 +1,5 @@
 import { FOCUS_OPTIONS, STAGE_OPTIONS } from "../../lib/briefOptions.ts"
-import { PANEL_PERSONAS } from "./personas.ts"
+import { FOUNDER_ARCHETYPES, FOUNDER_CAST } from "./personas.ts"
 import type { DomainPack, ScopeFieldOption } from "../types.ts"
 import { buildRoomBriefing, turnTaking } from "./briefing.ts"
 import { analyzeSystem, analyzeUser, audit, debrief, extractScope, orchestrate } from "./prompts.ts"
@@ -209,7 +209,8 @@ export const founderPack: DomainPack = {
       "The honest counter-argument…",
     ],
   },
-  personas: PANEL_PERSONAS,
+  archetypes: FOUNDER_ARCHETYPES,
+  personas: FOUNDER_CAST,
   turnTaking,
   briefing: buildRoomBriefing,
   prompts: { analyzeSystem, analyzeUser, orchestrate, debrief, extractScope },

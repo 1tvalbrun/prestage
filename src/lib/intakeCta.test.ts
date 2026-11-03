@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { confirmLabel, intakeCta } from "./intakeCta.ts"
-import { ALL_PACKS, getPack, lockedPersona, variantOf } from "../domains/registry.ts"
+import { ALL_PACKS, getPack, lockedArchetype, variantOf } from "../domains/registry.ts"
 import { CALL_TYPE_KEY, COLD_CALL, PITCH_MEETING } from "../domains/sales/variant.ts"
 import type { Scope } from "../domains/types.ts"
 
@@ -12,7 +12,7 @@ import type { Scope } from "../domains/types.ts"
 const ctaFor = (packId: string, scope: Scope = {}) => {
   const pack = getPack(packId)
   const variant = variantOf(pack, scope)
-  return intakeCta(pack, variant, lockedPersona(pack, variant))
+  return intakeCta(pack, variant, lockedArchetype(pack, variant))
 }
 
 test("founder: the pre-read comes before the counterpart choice", () => {
@@ -21,22 +21,22 @@ test("founder: the pre-read comes before the counterpart choice", () => {
   assert.match(cta.hint, /choose who to face after/)
 })
 
-test("sales pitch meeting: the pre-read comes before Cole", () => {
+test("sales pitch meeting: the pre-read comes before the buyer", () => {
   const cta = ctaFor("sales", { [CALL_TYPE_KEY]: PITCH_MEETING })
   assert.equal(cta.label, "Run the pre-read")
-  assert.equal(cta.hint, "Cole reads everything before the first question.")
+  assert.equal(cta.hint, "The buyer reads everything before the first question.")
 })
 
-test("sales cold call: no prep, Greg is next", () => {
+test("sales cold call: no prep, the counterpart is next", () => {
   const cta = ctaFor("sales", { [CALL_TYPE_KEY]: COLD_CALL })
-  assert.equal(cta.label, "Meet Greg")
-  assert.equal(cta.hint, "Greg knows nothing about you until you speak.")
+  assert.equal(cta.label, "Meet your counterpart")
+  assert.equal(cta.hint, "They know nothing about you until you speak.")
 })
 
-test("audit: the pre-read comes before Priya", () => {
+test("audit: the pre-read comes before the assessor", () => {
   const cta = ctaFor("audit")
   assert.equal(cta.label, "Run the pre-read")
-  assert.equal(cta.hint, "Priya reads everything before the first question.")
+  assert.equal(cta.hint, "The assessor reads everything before the first question.")
 })
 
 test("interview: the blueprint comes before the interviewer", () => {
@@ -49,7 +49,7 @@ test("no lane's button says meet someone while prep stands between", () => {
   for (const pack of ALL_PACKS) {
     const variant = variantOf(pack, {})
     if (!variant.prep) continue
-    const cta = intakeCta(pack, variant, lockedPersona(pack, variant))
+    const cta = intakeCta(pack, variant, lockedArchetype(pack, variant))
     assert.doesNotMatch(cta.label, /^Meet |Choose your counterpart/, pack.id)
   }
 })

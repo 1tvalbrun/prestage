@@ -10,6 +10,7 @@ import type { Id } from "@convex/_generated/dataModel"
 import { cn, relativeDay } from "@/lib/utils"
 import { parseOpenQuestions } from "@/lib/export"
 import { getPack } from "@/domains/registry"
+import { resolveCounterpart } from "@/domains/cast"
 import { firstNameOf } from "@/domains/types"
 import { BTN_PRIMARY } from "@/components/shared/buttons"
 import { LaneBadge } from "@/components/shared/LaneBadge"
@@ -141,9 +142,7 @@ const PracticePage = ({ params }: { params: Promise<{ practiceId: string }> }) =
   }
 
   const pack = getPack(practice.packId)
-  const persona = practice.personaId
-    ? pack.personas.find((p) => p.id === practice.personaId) ?? null
-    : null
+  const persona = practice.personaId ? resolveCounterpart(pack, practice.personaId) : null
   const personaFirst = persona ? firstNameOf(persona.name) : null
   const gaps = practice.audit?.status === "ready" ? practice.audit.gaps : []
   const openQuestions = parseOpenQuestions(practice.context?.openQuestions)
@@ -163,7 +162,7 @@ const PracticePage = ({ params }: { params: Promise<{ practiceId: string }> }) =
     <div className="mx-auto max-w-[1320px] px-12 pb-20 pt-10 max-lg:px-6 max-md:px-5 max-md:pt-7 xl:grid xl:grid-cols-[minmax(0,1fr)_348px] xl:gap-x-28">
       <header className="mb-8 flex items-start gap-3.5 max-md:flex-wrap max-md:gap-y-4 xl:col-span-2">
         {persona && (
-          <PersonaAvatar name={persona.name} available />
+          <PersonaAvatar name={persona.name} image={persona.image} available />
         )}
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2.5">

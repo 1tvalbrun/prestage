@@ -1,6 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import { ALL_PACKS, PACKS, lockedPersona, variantOf } from "./registry.ts"
+import { ALL_PACKS, PACKS, lockedArchetype, variantOf } from "./registry.ts"
 import { ROOM_MS } from "../lib/roomClock.ts"
 
 // Type-level coverage rides along: this file only compiles/runs if every
@@ -36,7 +36,7 @@ test("verdict values stay distinct across packs (findVerdict is first-match-wins
 test("the interview lane's cast and vocabulary match the spec", () => {
   assert.deepEqual(
     PACKS.interview.personas.map((persona) => persona.id),
-    ["screener-01", "hm-01", "practitioner-01"]
+    ["screener-01", "screener-02", "screener-03", "hm-01", "hm-02", "hm-03", "practitioner-01", "practitioner-02", "practitioner-03"]
   )
   assert.deepEqual(
     PACKS.interview.verdicts.options.map((option) => option.value),
@@ -49,21 +49,21 @@ test("the interview lane's cast and vocabulary match the spec", () => {
   assert.equal(PACKS.interview.sessionMetaField, "interviewType")
 })
 
-test("the interview recommendation follows the interview type and defaults to the full loop", () => {
-  const recommend = PACKS.interview.recommendPersona
+test("the interview format drives the recommended archetype; unset reads as a full loop", () => {
+  const recommend = PACKS.interview.recommendArchetype
   assert.ok(recommend)
-  assert.equal(recommend({ interviewType: "Screening call" })?.personaId, "screener-01")
-  assert.equal(recommend({ interviewType: "Behavioral" })?.personaId, "hm-01")
-  assert.equal(recommend({ interviewType: "Technical & scenarios" })?.personaId, "practitioner-01")
-  assert.equal(recommend({ interviewType: "Full loop (mixed)" })?.personaId, "hm-01")
-  assert.equal(recommend({})?.personaId, "hm-01")
+  assert.equal(recommend({ interviewType: "Screening call" })?.archetypeId, "recruiter_screen")
+  assert.equal(recommend({ interviewType: "Behavioral" })?.archetypeId, "hiring_manager")
+  assert.equal(recommend({ interviewType: "Technical & scenarios" })?.archetypeId, "domain_practitioner")
+  assert.equal(recommend({ interviewType: "Full loop (mixed)" })?.archetypeId, "hiring_manager")
+  assert.equal(recommend({})?.archetypeId, "hiring_manager")
 })
 
 test("a pack without variants resolves to its own shape, whatever the scope", () => {
   const variant = variantOf(PACKS.founder, { anything: "at all" })
   assert.equal(variant.scopeFields, PACKS.founder.scopeFields)
   assert.equal(variant.prep, true)
-  assert.equal(variant.personaId, null)
+  assert.equal(variant.archetypeId, null)
   assert.equal(variant.roomMinutes, ROOM_MS / 60_000)
   assert.equal(variant.closingRead, true)
   assert.equal(variant.remembers, true)
@@ -73,18 +73,34 @@ test("a pack without variants resolves to its own shape, whatever the scope", ()
   assert.equal(variant.copy.formSections, PACKS.founder.copy.form.sections)
 })
 
-test("lockedPersona is the single persona of a one-persona lane, else the variant's lock, else null", () => {
-  assert.equal(lockedPersona(PACKS.audit, variantOf(PACKS.audit, {}))?.id, PACKS.audit.personas[0].id)
-  assert.equal(lockedPersona(PACKS.founder, variantOf(PACKS.founder, {})), null)
-  const locked = { ...variantOf(PACKS.founder, {}), personaId: PACKS.founder.personas[1].id }
-  assert.equal(lockedPersona(PACKS.founder, locked)?.id, PACKS.founder.personas[1].id)
+test("lockedArchetype is the single archetype of a one-role lane, else the variant's lock, else null", () => {
+  assert.equal(lockedArchetype(PACKS.audit, variantOf(PACKS.audit, {}))?.id, "lead_assessor")
+  assert.equal(lockedArchetype(PACKS.founder, variantOf(PACKS.founder, {})), null)
+  const locked = { ...variantOf(PACKS.founder, {}), archetypeId: "target_customer" }
+  assert.equal(lockedArchetype(PACKS.founder, locked)?.id, "target_customer")
+})
+
+test("every pack's personas and archetypes are consistent", () => {
+  for (const pack of ALL_PACKS) {
+    const archetypeIds = new Set(pack.archetypes.map((a) => a.id))
+    for (const persona of pack.personas) {
+      assert.ok(archetypeIds.has(persona.archetypeId), `${pack.id}: ${persona.id} has no archetype`)
+    }
+    for (const archetype of pack.archetypes) {
+      assert.ok(
+        pack.personas.some((p) => p.archetypeId === archetype.id),
+        `${pack.id}: ${archetype.id} has no face`
+      )
+    }
+    assert.equal(new Set(pack.personas.map((p) => p.id)).size, pack.personas.length, `${pack.id}: duplicate persona id`)
+  }
 })
 
 test("the sales lane's call types pick the buyer and the vocabulary", () => {
   assert.equal(PACKS.sales.variantField, "callType")
   assert.deepEqual(
     PACKS.sales.personas.map((persona) => persona.id),
-    ["buyer-01", "prospect-01"]
+    ["buyer-01", "buyer-02", "buyer-03", "prospect-01", "prospect-02", "prospect-03"]
   )
   assert.deepEqual(
     PACKS.sales.verdicts.options.map((option) => option.value),

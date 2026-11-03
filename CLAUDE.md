@@ -61,3 +61,5 @@ conventions on top of those:
 - Commit. Ever. The developer is the only one who commits, after reviewing
   the diff. No git add/commit/stash workarounds; leave work uncommitted in
   the tree and stop for review.
+- Add Co-Authored-By or "Generated with" attribution lines to commit
+  messages or PR descriptions.

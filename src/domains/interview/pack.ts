@@ -1,4 +1,4 @@
-import { INTERVIEWER_PERSONAS } from "./personas.ts"
+import { INTERVIEW_ARCHETYPES, INTERVIEW_CAST } from "./personas.ts"
 import { scopeText, type DomainPack, type Scope } from "../types.ts"
 import { buildRoomBriefing, turnTaking } from "./briefing.ts"
 import {
@@ -40,11 +40,11 @@ const FOCUS_AREA_OPTIONS = [
 
 // Interview formats are few and stable, so the format drives the
 // recommended interviewer; an unset format reads as a full loop.
-const TYPE_TO_PERSONA: Record<string, { personaId: string; reason: string }> = {
-  "Screening call": { personaId: "screener-01", reason: "Built for the screen" },
-  Behavioral: { personaId: "hm-01", reason: "Built for behavioral loops" },
-  "Technical & scenarios": { personaId: "practitioner-01", reason: "Built for the deep-dive" },
-  "Full loop (mixed)": { personaId: "hm-01", reason: "Anchors a full loop" },
+const TYPE_TO_ARCHETYPE: Record<string, { archetypeId: string; reason: string }> = {
+  "Screening call": { archetypeId: "recruiter_screen", reason: "Built for the screen" },
+  Behavioral: { archetypeId: "hiring_manager", reason: "Built for behavioral loops" },
+  "Technical & scenarios": { archetypeId: "domain_practitioner", reason: "Built for the deep-dive" },
+  "Full loop (mixed)": { archetypeId: "hiring_manager", reason: "Anchors a full loop" },
 }
 
 export const interviewPack: DomainPack = {
@@ -155,8 +155,8 @@ export const interviewPack: DomainPack = {
     },
   },
   sessionMetaField: "interviewType",
-  recommendPersona: (scope: Scope) =>
-    TYPE_TO_PERSONA[scopeText(scope, "interviewType")] ?? TYPE_TO_PERSONA["Full loop (mixed)"],
+  recommendArchetype: (scope: Scope) =>
+    TYPE_TO_ARCHETYPE[scopeText(scope, "interviewType")] ?? TYPE_TO_ARCHETYPE["Full loop (mixed)"],
   copy: {
     tellIt: {
       heading: "What are you interviewing for?",
@@ -231,7 +231,8 @@ export const interviewPack: DomainPack = {
       "Looking back, I'd change…",
     ],
   },
-  personas: INTERVIEWER_PERSONAS,
+  archetypes: INTERVIEW_ARCHETYPES,
+  personas: INTERVIEW_CAST,
   turnTaking,
   briefing: buildRoomBriefing,
   prompts: { analyzeSystem, analyzeUser, orchestrate, debrief, extractScope },

@@ -24,7 +24,13 @@ const claim = (): Claim => ({
 })
 
 test("a fresh session carries the in-scope safeguards, role, and concerns", () => {
-  const briefing = buildRoomBriefing({ scope, audit: null, continuity: null, transcript: [] })
+  const briefing = buildRoomBriefing({
+    scope,
+    audit: null,
+    continuity: null,
+    counterpartFirstName: "Greg",
+    transcript: [],
+  })
   assert.match(briefing.personalityPreamble, /11\.2 Perform Automated Backups/)
   assert.match(briefing.personalityPreamble, /ONLY control content you may reference/)
   assert.match(briefing.personalityPreamble, /DevOps lead who owns backups/)
@@ -40,6 +46,7 @@ test("a pre-read with citable documents earns the documents clause and carries t
       gaps: [gap("No recovery test report"), gap("No restore evidence", "gap")],
     },
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   assert.match(briefing.startScript, /I went through the CourtTime production documents/)
@@ -51,6 +58,7 @@ test("nothing citable drops the documents clause", () => {
     scope,
     audit: { claims: [], gaps: [gap("No recovery process document")] },
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   assert.doesNotMatch(briefing.startScript, /went through/)
@@ -81,6 +89,7 @@ test("open commitments drive the opener; delivered ones are received, not re-ask
       ],
       updatedAt: 2,
     },
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   assert.match(briefing.startScript, /Last time you said you'd produce the last recovery test report/)
@@ -94,6 +103,7 @@ test("a resume never re-introduces and continues mid-session", () => {
     scope,
     audit: null,
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [
       { text: "We back up nightly", type: "user", timestamp: 2000, spokenAt: 5000 },
       { text: "How often do backups run?", type: "panelist", timestamp: 1000, spokenAt: 1000 },

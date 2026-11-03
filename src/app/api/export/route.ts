@@ -5,6 +5,7 @@ import { renderToBuffer } from "@react-pdf/renderer"
 import { api } from "@convex/_generated/api"
 import type { Id } from "@convex/_generated/dataModel"
 import { findVerdict, getPack } from "@/domains/registry"
+import { resolveCounterpart } from "@/domains/cast"
 import { blockersFirst, exportFilename, parseOpenQuestions } from "@/lib/export"
 import { practiceReport } from "@/lib/pdf/PracticeReport"
 import { sessionDebrief } from "@/lib/pdf/SessionDebrief"
@@ -94,7 +95,9 @@ export const GET = async (req: NextRequest) => {
       practiceReport({
         practiceName: practice.name,
         laneLabel: `${pack.label} lane`,
-        personaName: pack.personas.find((p) => p.id === practice.personaId)?.name ?? null,
+        personaName: practice.personaId
+          ? (resolveCounterpart(pack, practice.personaId)?.name ?? null)
+          : null,
         exportedAt,
         claims: audit?.claims ?? [],
         gaps: blockersFirst(audit?.gaps ?? []),
