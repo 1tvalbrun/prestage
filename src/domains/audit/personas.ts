@@ -1,17 +1,12 @@
-import type { Persona } from "../types.ts"
+import type { Archetype, Persona } from "../types.ts"
 
-// The audit lane's assessor. One persona on purpose: an audit interview is
-// a 1-on-1 session. The Runway avatar id lives in the Convex avatars
-// registry.
-export const ASSESSOR_PERSONAS: Persona[] = [
+// The audit lane's one role. An audit interview is a 1-on-1 session.
+export const AUDIT_ARCHETYPES: Archetype[] = [
   {
-    id: "assessor-01",
-    archetypeId: "lead_assessor",
-    name: "Priya Nair",
+    id: "lead_assessor",
     role: "Lead Security Assessor, 25 years across finance and SaaS",
     shortRole: "The assessor",
     tone: "Methodical and unhurried, kind but impossible to rush past, asks to see rather than hear",
-    image: "/avatars/priya-nair.png",
     attack: [
       { text: "Runs it like the real thing. Comes for " },
       { text: "evidence and cadence", strong: true },
@@ -21,4 +16,10 @@ export const ASSESSOR_PERSONAS: Persona[] = [
     tags: ["Evidence trails", "Show don't tell", "Cadence"],
     signature: "If ransomware took your production environment tonight, explain to me why it can't touch this copy.",
   },
+]
+
+export const AUDIT_CAST: Persona[] = [
+  { id: "assessor-01", archetypeId: "lead_assessor", name: "Priya Nair", image: "/avatars/priya-nair.png" },
+  { id: "assessor-02", archetypeId: "lead_assessor", name: "Mark Sorensen", image: "/avatars/mark-sorensen.png" },
+  { id: "assessor-03", archetypeId: "lead_assessor", name: "Malcolm Pierce", image: "/avatars/malcolm-pierce.png" },
 ]

@@ -185,6 +185,7 @@ export const mint = action({
         : null,
       blueprint: practice.blueprint ?? null,
       continuity: practice.continuity ?? null,
+      counterpartFirstName: firstNameOf(session.persona.name),
       transcript: session.transcript,
     })
 

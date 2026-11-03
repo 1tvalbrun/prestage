@@ -16,8 +16,10 @@ import type { Blueprint } from "../src/lib/blueprint"
 import { materialFileType, materialsRemaining, validateMaterialFile } from "../src/lib/materials"
 import { DECK_EXTRACTION_CAUTION, parseExtractedScope } from "../src/lib/intake"
 import { createOpenAI, modelSettings } from "../src/lib/openai"
-import { getPack, isPackId, variantOf } from "../src/domains/registry"
+import { getPack, isPackId, lockedArchetype, variantOf } from "../src/domains/registry"
+import { drawCast, resolveCounterpart } from "../src/domains/cast"
 import { scopeText, type Scope } from "../src/domains/types"
+import type { DomainPack } from "../src/domains/types"
 import { priorityValidator } from "./schema"
 import { insertSessionForPersona } from "./sessions"
 import { releaseFile } from "./materials"
@@ -64,6 +66,58 @@ const insertMaterials = async (
     })
     await ctx.scheduler.runAfter(0, internal.ingest.extract, { materialId })
   }
+}
+
+// The face the user met most recently in each of this pack's archetypes,
+// read from their own practices (the by_user prefix covers archived rows
+// too). A practice with no sessions has not been "met".
+const lastFacedByArchetype = async (
+  ctx: MutationCtx,
+  userId: string,
+  pack: DomainPack
+): Promise<Record<string, string>> => {
+  const practices = await ctx.db
+    .query("practices")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect()
+  const latest: Record<string, { personaId: string; at: number }> = {}
+  for (const practice of practices) {
+    if (practice.packId !== pack.id || !practice.personaId || !practice.lastSessionAt) continue
+    const counterpart = resolveCounterpart(pack, practice.personaId)
+    if (!counterpart) continue
+    const current = latest[counterpart.archetypeId]
+    if (!current || practice.lastSessionAt > current.at) {
+      latest[counterpart.archetypeId] = { personaId: practice.personaId, at: practice.lastSessionAt }
+    }
+  }
+  return Object.fromEntries(Object.entries(latest).map(([id, { personaId }]) => [id, personaId]))
+}
+
+// A fresh cast for a practice, seeded from a face it already holds so an
+// existing practice never changes who it is with.
+const castFor = async (
+  ctx: MutationCtx,
+  userId: string,
+  pack: DomainPack,
+  existingPersonaId: string | undefined
+): Promise<Record<string, string>> => {
+  // A face with no registered avatar can never open a room, so the draw
+  // skips it unless an archetype has no registered face at all — then its
+  // full cast stays so "No avatar registered" surfaces instead.
+  const avatars = await ctx.db
+    .query("avatars")
+    .withIndex("by_pack_persona", (q) => q.eq("packId", pack.id))
+    .collect()
+  const registered = new Set(avatars.map((avatar) => avatar.personaId))
+  const drawable = { ...pack, personas: pack.personas.filter((p) => registered.has(p.id)) }
+  const personas = pack.archetypes.flatMap((archetype) => {
+    const faces = drawable.personas.filter((p) => p.archetypeId === archetype.id)
+    return faces.length > 0 ? faces : pack.personas.filter((p) => p.archetypeId === archetype.id)
+  })
+  const cast = drawCast({ ...pack, personas }, await lastFacedByArchetype(ctx, userId, pack), Math.random)
+  const existing = existingPersonaId ? resolveCounterpart(pack, existingPersonaId) : null
+  if (existing) cast[existing.archetypeId] = existing.id
+  return cast
 }
 
 export const create = mutation({
@@ -123,12 +177,16 @@ export const create = mutation({
     // Every create is a new thread on purpose — "CourtTime · gym pilot" and
     // "CourtTime · school district" are different practices even when the
     // product is the same.
+    const cast = await castFor(ctx, identity.subject, pack, undefined)
+    const locked = lockedArchetype(pack, variant)
     const practiceId = await ctx.db.insert("practices", {
       userId: identity.subject,
       name,
       packId: pack.id,
       status: variant.prep ? "draft" : "ready",
       scope,
+      cast,
+      ...(locked ? { personaId: cast[locked.id] } : {}),
     })
     if (!variant.prep) return practiceId
 
@@ -420,8 +478,8 @@ export const remove = mutation({
 // The returning-user path: one click from Home or the practice header back
 // into the room. A still-live session is rejoined rather than duplicated
 // (and double-billed); otherwise a fresh session starts with the practice's
-// persona — the continuity briefing carries the memory. No persona yet
-// means the caller routes to the meet step instead.
+// persona — the continuity briefing carries the memory. A practice with no
+// sessions yet routes to the counterpart stage instead.
 export const continueSession = mutation({
   args: { id: v.id("practices") },
   handler: async (ctx, args) => {
@@ -435,7 +493,9 @@ export const continueSession = mutation({
       )
       .first()
     if (live) return { sessionId: live._id }
-    if (!practice.personaId || practice.status !== "ready") return { sessionId: null }
+    if (!practice.personaId || (practice.sessionCount ?? 0) === 0 || practice.status !== "ready") {
+      return { sessionId: null }
+    }
     const sessionId = await insertSessionForPersona(
       ctx,
       practice,
@@ -446,18 +506,78 @@ export const continueSession = mutation({
   },
 })
 
-// Chosen at the meet step; sessions snapshot the full persona at create.
-export const setPersona = mutation({
+// Practices from before casts get one on first visit to the counterpart
+// stage. A practice that already has a cast is a no-op, so a re-render
+// never redraws.
+export const ensureCast = mutation({
+  args: { id: v.id("practices") },
+  handler: async (ctx, args) => {
+    const identity = await requireIdentity(ctx)
+    const practice = ownedOrNull(identity, await ctx.db.get(args.id))
+    if (!practice) throw new Error("Practice not found")
+    if (practice.cast) return
+    const pack = getPack(practice.packId)
+    const cast = await castFor(ctx, identity.subject, pack, practice.personaId)
+    const locked = lockedArchetype(pack, variantOf(pack, practice.scope))
+    await ctx.db.patch(args.id, {
+      cast,
+      ...(locked && !practice.personaId ? { personaId: cast[locked.id] } : {}),
+    })
+  },
+})
+
+// The persona ids this user has actually met in a pack: any of their
+// practices with that face and at least one session.
+export const metFaces = query({
+  args: { packId: v.string() },
+  handler: async (ctx, args): Promise<string[]> => {
+    const identity = await requireIdentity(ctx)
+    const practices = await ctx.db
+      .query("practices")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect()
+    const met = new Set<string>()
+    for (const practice of practices) {
+      if (practice.packId === args.packId && practice.personaId && (practice.sessionCount ?? 0) > 0) {
+        met.add(practice.personaId)
+      }
+    }
+    return [...met]
+  },
+})
+
+// "Face them again": the only client path that names a persona id, and it
+// can only name a face this user has already met in that archetype, on a
+// practice with no sessions yet.
+export const faceAgain = mutation({
   args: { id: v.id("practices"), personaId: v.string() },
   handler: async (ctx, args) => {
     const identity = await requireIdentity(ctx)
     const practice = ownedOrNull(identity, await ctx.db.get(args.id))
     if (!practice) throw new Error("Practice not found")
+    if ((practice.sessionCount ?? 0) > 0) throw new Error("This practice already has sessions")
     const pack = getPack(practice.packId)
-    if (!pack.personas.some((persona) => persona.id === args.personaId)) {
-      throw new Error("Unknown persona")
-    }
-    await ctx.db.patch(args.id, { personaId: args.personaId })
+    const counterpart = resolveCounterpart(pack, args.personaId)
+    if (!counterpart) throw new Error("Unknown persona")
+    const history = await ctx.db
+      .query("practices")
+      .withIndex("by_user", (q) => q.eq("userId", identity.subject))
+      .collect()
+    const hasMet = history.some(
+      (p) => p.packId === pack.id && p.personaId === args.personaId && (p.sessionCount ?? 0) > 0
+    )
+    if (!hasMet) throw new Error("Not a face you have met")
+    const cast = { ...(practice.cast ?? (await castFor(ctx, identity.subject, pack, practice.personaId))) }
+    cast[counterpart.archetypeId] = counterpart.id
+    // The practice's own face follows the swap only when it is that archetype.
+    const current = practice.personaId ? resolveCounterpart(pack, practice.personaId) : null
+    const locked = lockedArchetype(pack, variantOf(pack, practice.scope))
+    const followsPersona =
+      current?.archetypeId === counterpart.archetypeId || locked?.id === counterpart.archetypeId
+    await ctx.db.patch(args.id, {
+      cast,
+      ...(followsPersona ? { personaId: counterpart.id } : {}),
+    })
   },
 })
 

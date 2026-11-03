@@ -146,6 +146,11 @@ export default defineSchema({
     packId: v.string(),
     // Chosen at the meet step; sessions snapshot the full persona.
     personaId: v.optional(v.string()),
+    // The face drawn for each archetype in the pack, keyed by archetype id.
+    // Drawn once by the server when the practice is created; never set from
+    // a client-supplied persona id. Optional: rows from before casts get one
+    // lazily (practices.ensureCast).
+    cast: v.optional(v.record(v.string(), v.string())),
     // Pinned practices sort to the top of their lane.
     pinned: v.optional(v.boolean()),
     // Set when the user archives the practice: out of the home page and

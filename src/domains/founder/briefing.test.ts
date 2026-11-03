@@ -23,6 +23,7 @@ test("a fresh session with citable materials earns the materials clause and carr
       gaps: [gap("No accuracy methodology"), gap("No pricing evidence", "gap")],
     },
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   assert.match(briefing.startScript, /went through the Acme materials/)
@@ -35,6 +36,7 @@ test("a fresh session with no audit still opens, without inventing findings", ()
     scope: { ideaName: "Acme", description: "desc" },
     audit: null,
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   assert.match(briefing.startScript, /Acme/)
@@ -46,6 +48,7 @@ test("a resume never re-introduces and digests turns in speech order", () => {
     scope: { ideaName: "Acme", description: "desc" },
     audit: null,
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [
       // Arrival order reversed from speech order — digest must sort by spokenAt.
       { text: "Answer about churn", type: "user", timestamp: 2000, spokenAt: 5000 },
@@ -64,6 +67,7 @@ test("the digest keeps only the most recent turns", () => {
     scope: { ideaName: "Acme", description: "desc" },
     audit: null,
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: Array.from({ length: 7 }, (_, i) => ({
       text: `turn-${i}`,
       type: "user" as const,
@@ -88,6 +92,7 @@ test("a blocker outranks earlier plain gaps in the briefing", () => {
       ],
     },
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   assert.match(briefing.personalityPreamble, /The blocker/)
@@ -98,6 +103,7 @@ test("long turns are truncated in the digest", () => {
     scope: { ideaName: "Acme", description: "desc" },
     audit: null,
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [{ text: "x".repeat(500), type: "user", timestamp: 1, spokenAt: 1 }],
   })
   assert.ok(!briefing.personalityPreamble.includes("x".repeat(200)))
@@ -108,6 +114,7 @@ test("an audit with nothing citable never claims to have read materials", () => 
     scope: { ideaName: "Acme", description: "desc" },
     audit: { claims: [], gaps: [gap("No accuracy methodology")] },
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   assert.match(briefing.startScript, /one-minute version of Acme/)
@@ -147,6 +154,7 @@ test("open commitments drive the opener and forbid re-introduction", () => {
     scope: { ideaName: "Acme", description: "desc" },
     audit: null,
     continuity,
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   assert.match(briefing.startScript, /Last time you said you'd send the churn cohort data/)
@@ -164,6 +172,7 @@ test("continuity without open items keeps the standard opener but carries the me
       ...continuity,
       actionItems: continuity.actionItems.filter((item) => item.status !== "open"),
     },
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   assert.match(briefing.startScript, /one-minute version of Acme/)
@@ -175,6 +184,7 @@ test("overflow drops trailing sections whole and keeps the core context", () => 
     scope: { ideaName: "Acme", description: "desc" },
     audit: { claims: [], gaps: [gap("No pricing evidence")] },
     continuity: { ...continuity, lastSessionSummary: "x".repeat(5000) },
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   assert.match(briefing.personalityPreamble, /pitching "Acme"/)

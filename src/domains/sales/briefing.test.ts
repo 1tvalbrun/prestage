@@ -2,6 +2,7 @@ import test from "node:test"
 import assert from "node:assert/strict"
 import { buildRoomBriefing } from "./briefing.ts"
 import type { Claim, Gap } from "../../lib/audit.ts"
+import { salesPack } from "./pack.ts"
 import { CALL_TYPE_KEY, COLD_CALL } from "./variant.ts"
 
 const scope = {
@@ -25,7 +26,13 @@ const claim = (): Claim => ({
 })
 
 test("a fresh session casts the avatar as the prospect and carries the ask", () => {
-  const briefing = buildRoomBriefing({ scope, audit: null, continuity: null, transcript: [] })
+  const briefing = buildRoomBriefing({
+    scope,
+    audit: null,
+    continuity: null,
+    counterpartFirstName: "Greg",
+    transcript: [],
+  })
   assert.match(briefing.personalityPreamble, /Facilities manager at a mid-size gym/)
   assert.match(briefing.personalityPreamble, /say yes to: A pilot/)
   assert.match(briefing.personalityPreamble, /Switching cost/)
@@ -40,6 +47,7 @@ test("a fresh session with citable material earns the material clause and carrie
       gaps: [gap("No pricing anywhere"), gap("No references", "gap")],
     },
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   assert.match(briefing.startScript, /read through the CourtFlow material/)
@@ -52,6 +60,7 @@ test("a resume never re-introduces and digests turns in speech order", () => {
     scope,
     audit: null,
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [
       { text: "Answer about rollout", type: "user", timestamp: 2000, spokenAt: 5000 },
       { text: "How long does rollout take?", type: "panelist", timestamp: 1000, spokenAt: 1000 },
@@ -69,6 +78,7 @@ test("a session with no expected objections stays silent about them", () => {
     scope: { ...scope, objections: [] },
     audit: null,
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   assert.doesNotMatch(briefing.personalityPreamble, /raise them naturally/)
@@ -79,6 +89,7 @@ test("an audit with nothing citable never claims to have read material", () => {
     scope,
     audit: { claims: [], gaps: [gap("No customer references")] },
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   assert.match(briefing.startScript, /you've got my attention/i)
@@ -107,7 +118,13 @@ const continuity = {
 }
 
 test("open commitments drive the opener and forbid re-introduction", () => {
-  const briefing = buildRoomBriefing({ scope, audit: null, continuity, transcript: [] })
+  const briefing = buildRoomBriefing({
+    scope,
+    audit: null,
+    continuity,
+    counterpartFirstName: "Greg",
+    transcript: [],
+  })
   assert.match(briefing.startScript, /Last time you said you'd send two customer references/)
   assert.match(briefing.personalityPreamble, /do not introduce yourself/i)
   assert.match(briefing.personalityPreamble, /already delivered: Deliver the security summary/)
@@ -122,6 +139,7 @@ test("continuity without open items keeps the standard opener but carries the me
       ...continuity,
       actionItems: continuity.actionItems.filter((item) => item.status !== "open"),
     },
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   assert.match(briefing.startScript, /you've got my attention/i)
@@ -136,7 +154,13 @@ const coldScope = {
 }
 
 test("a cold call casts the avatar as the prospect and tells them nothing about the caller", () => {
-  const briefing = buildRoomBriefing({ scope: coldScope, audit: null, continuity: null, transcript: [] })
+  const briefing = buildRoomBriefing({
+    scope: coldScope,
+    audit: null,
+    continuity: null,
+    counterpartFirstName: "Greg",
+    transcript: [],
+  })
   assert.match(briefing.personalityPreamble, /Owner of a 12-truck HVAC company/)
   assert.doesNotMatch(briefing.personalityPreamble, /Dispatch software/)
   assert.doesNotMatch(briefing.personalityPreamble, /Book a meeting/)
@@ -158,6 +182,7 @@ test("a cold call ignores audit and continuity: a stranger has read nothing and 
     scope: coldScope,
     audit: { claims: [claim()], gaps: [gap("No pricing anywhere")] },
     continuity: { lastSessionSummary: "Went well", actionItems: [], updatedAt: 0 },
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   assert.doesNotMatch(briefing.personalityPreamble, /No pricing anywhere/)
@@ -170,6 +195,7 @@ test("a resumed cold call picks the call back up without a re-introduction", () 
     scope: coldScope,
     audit: null,
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [
       { text: "Hi Greg, this is Dana from FleetPath.", type: "user", timestamp: 1 },
       { text: "What's this about?", type: "panelist", timestamp: 2 },
@@ -178,4 +204,15 @@ test("a resumed cold call picks the call back up without a re-introduction", () 
   assert.match(briefing.personalityPreamble, /What's this about\?/)
   assert.match(briefing.personalityPreamble, /Do not introduce yourself again/)
   assert.doesNotMatch(briefing.startScript, /this is Greg/)
+})
+
+test("a fresh cold call opens with the drawn face's name", () => {
+  const briefing = salesPack.briefing({
+    scope: { [CALL_TYPE_KEY]: COLD_CALL, prospect: "the owner of a dental office" },
+    audit: null,
+    continuity: null,
+    transcript: [],
+    counterpartFirstName: "Tammy",
+  })
+  assert.equal(briefing.startScript, "Yeah, this is Tammy.")
 })

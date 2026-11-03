@@ -1,5 +1,5 @@
-import { ASSESSOR_PERSONAS } from "./personas.ts"
-import { firstNameOf, scopeText, type DomainPack } from "../types.ts"
+import { AUDIT_ARCHETYPES, AUDIT_CAST } from "./personas.ts"
+import { scopeText, type DomainPack } from "../types.ts"
 import { areaByLabel, CONTROL_AREAS } from "./catalog.ts"
 import { buildRoomBriefing, turnTaking } from "./briefing.ts"
 import { analyzeSystem, analyzeUser, audit, debrief, extractScope, orchestrate } from "./prompts.ts"
@@ -93,7 +93,7 @@ export const auditPack: DomainPack = {
     stepLabel: "Pre-read",
     start: {
       label: "Run the pre-read",
-      hint: `${firstNameOf(ASSESSOR_PERSONAS[0].name)} reads everything before the first question.`,
+      hint: "The assessor reads everything before the first question.",
     },
     prompt: audit,
     wait: {
@@ -150,7 +150,7 @@ export const auditPack: DomainPack = {
     // controlArea is deliberately not previewed; it drives the evidence
     // rail instead.
     preview: {
-      title: "What Priya will read",
+      title: "What the assessor will read",
       rows: [
         { key: "systemName", label: "Assessing", hint: "Not yet named" },
         { key: "description", label: "Environment", hint: "What it is, where it runs" },
@@ -197,7 +197,8 @@ export const auditPack: DomainPack = {
       "The owner for that is…",
     ],
   },
-  personas: ASSESSOR_PERSONAS,
+  archetypes: AUDIT_ARCHETYPES,
+  personas: AUDIT_CAST,
   turnTaking,
   briefing: buildRoomBriefing,
   prompts: { analyzeSystem, analyzeUser, orchestrate, debrief, extractScope },

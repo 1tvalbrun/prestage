@@ -40,7 +40,11 @@ const resumeDigest = (transcript: BriefingInput["transcript"]): string =>
 // gaps, no ask, no memory of earlier sessions; the seller's offer is what
 // the call is for them to find out. The no-hang-up rules live here rather
 // than on the Character so the room's ending stays the clock's.
-const buildColdCallBriefing = ({ scope, transcript }: BriefingInput): RoomBriefing => {
+const buildColdCallBriefing = ({
+  scope,
+  transcript,
+  counterpartFirstName,
+}: BriefingInput): RoomBriefing => {
   const prospect = scopeText(scope, "prospect")
   if (transcript.length > 0) {
     return {
@@ -56,7 +60,7 @@ const buildColdCallBriefing = ({ scope, transcript }: BriefingInput): RoomBriefi
         ` When the caller asks for a specific, small next step and offers a time, take one of the times or name your own, unless they have argued with you or told you nothing about your business. Before you say yes to any next step, raise one real objection about cost, switching, or the system you already have, and let how they handle it decide. Once you have said you have to go, a second push for the meeting is the end of the call: say bye and stop.`,
         ` This call runs about ${minutesPhrase(COLD_CALL_MINUTES)}. When it has run its course, end it the way you would: say you have to get back to it, say goodbye, and stop.`,
       ]) + "\n\n",
-    startScript: "Yeah, this is Greg.",
+    startScript: `Yeah, this is ${counterpartFirstName}.`,
   }
 }
 

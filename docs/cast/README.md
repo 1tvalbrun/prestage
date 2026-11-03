@@ -42,7 +42,7 @@ Each avatar gets a custom voice generated from a description. The rule: accent f
 
 - Marcus Rivera: voice Nathan to Marcus (was a duplicate of Cole).
 - Sarah Okafor: voice Georgia to Clara (was a duplicate of Priya).
-- Victoria Chen, Marcus Rivera, Sarah Okafor: the stored personalities still describe a live three-person panel with each other. The room is one-on-one; the push script replaces them with the role files.
+- Victoria Chen, Marcus Rivera, Sarah Okafor, Priya Nair, Jun Park, Renee Calloway, Tomás Reyes: recreated on 2026-09-23. Runway rejects personality and start-script writes on Characters created before mid-September 2026 ("Unable to verify this avatar", from the UI and from `PATCH /v1/avatars/{id}` alike; name, voice, and document writes still work). The seven were recreated with the role personalities and custom voices, and their new ids registered on dev and prod. The old Characters still exist on Runway and can be deleted once no live session references them.
 
 ## Images
 
@@ -50,7 +50,7 @@ All in `public/avatars/`, slug-named, downscaled to 1920px wide (the largest ren
 
 ## Runway Character ids
 
-Captured from the Runway API on 2026-09-16. Register each against its pack persona once the persona exists in code.
+Captured from the Runway API on 2026-09-16; the seven recreated Characters updated 2026-09-23. Register each against its pack persona once the persona exists in code.
 
 | Slug | Character | Runway id |
 |---|---|---|
@@ -65,19 +65,19 @@ Captured from the Runway API on 2026-09-16. Register each against its pack perso
 | emily-hartman | Emily Hartman | 16e22462-0d03-4b97-8044-5f47932c9f70 |
 | erik-larsen | Erik Larsen | 1b163e2e-8273-4d40-821c-d291666abc4e |
 | greg-hollis | Greg Hollis | d5b2d794-35b9-41d1-99ad-0a74f14db53b |
-| jun-park | Jun Park | e4da878f-8d71-430b-bf90-5bd17745922f |
+| jun-park | Jun Park | 1dc91bd2-2313-4f92-882c-6ae553e4da29 |
 | luis-ortega | Luis Ortega | 26a71a8b-1020-423a-bf14-8c526ac09b0e |
 | malcolm-pierce | Malcolm Pierce | c46f24dc-1520-42b5-86d1-3ff266b4117f |
-| marcus-rivera | Marcus Rivera | 4b0e4ef1-57b8-4144-b373-d95f1e8cf875 |
+| marcus-rivera | Marcus Rivera | e9f99a74-2d1a-4ee9-a8f8-683fb880c9a2 |
 | mark-sorensen | Mark Sorensen | 0c665f5b-a187-4f86-87b2-986979e8a368 |
 | megan-sullivan | Megan Sullivan | 2632f8f8-71de-4e35-8bf8-32fb08ffd061 |
 | omar-nasser | Omar Nasser | afb922f6-119f-439c-b516-ba069ccd807a |
-| priya-nair | Priya Nair | edf39a29-264d-41c0-94a4-4919157ab563 |
-| renee-calloway | Renee Calloway | 5d44147b-82ab-40be-a863-ffafcfebe138 |
+| priya-nair | Priya Nair | 125b53c0-0d92-4cf6-990d-a339b85a0cb8 |
+| renee-calloway | Renee Calloway | 235a38f0-56c7-4733-8061-d9be87d199ec |
 | ryan-mitchell | Ryan Mitchell | fcbaa9c2-7c69-4294-b593-38608dc543f3 |
-| sarah-okafor | Sarah Okafor | 0e829c42-0163-495e-b644-fd018ee87f36 |
+| sarah-okafor | Dr. Sarah Okafor | 866f261a-e30a-4fb1-9e53-43f5709180c9 |
 | tammy-nguyen | Tammy Nguyen | 8a60c7c9-e10c-420e-8c78-e948ee96ec85 |
 | tom-hendricks | Tom Hendricks | 12cb3477-169e-4ee4-81ce-f7506ee1d4dc |
-| tomas-reyes | Tomás Reyes | a0b8290c-d07e-4582-916d-f81041378728 |
+| tomas-reyes | Tomás Reyes | 6670fb02-cb36-4396-acb6-6fae9105d961 |
 | valeria-castillo | Valeria Castillo | 7597a32e-0340-4adb-b390-1fdc3dd3e521 |
-| victoria-chen | Victoria Chen | c5c27032-9663-404e-9587-d5a25012d5da |
+| victoria-chen | Victoria Chen | 863ff580-59dd-4be9-8b23-23dc04f5b577 |

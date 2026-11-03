@@ -17,11 +17,11 @@ test("before a call type is chosen, the only field is the call type", () => {
   assert.equal(salesVariant({}).scopeFields[0].required, true)
 })
 
-test("a cold call is three short fields, no prep, Greg, two minutes, no closing read", () => {
+test("a cold call is three short fields, no prep, the cold-call prospect, two minutes, no closing read", () => {
   const variant = salesVariant({ [CALL_TYPE_KEY]: COLD_CALL })
   assert.deepEqual(keys({ [CALL_TYPE_KEY]: COLD_CALL }), [CALL_TYPE_KEY, "prospect", "offering", "goal"])
   assert.equal(variant.prep, false)
-  assert.equal(variant.personaId, "prospect-01")
+  assert.equal(variant.archetypeId, "cold_prospect")
   assert.equal(variant.roomMinutes, 2)
   assert.equal(variant.closingRead, false)
   assert.equal(variant.remembers, false)
@@ -38,7 +38,7 @@ test("a cold call is three short fields, no prep, Greg, two minutes, no closing 
   }
 })
 
-test("a pitch meeting keeps today's fields, prep, Cole, five minutes, a closing read", () => {
+test("a pitch meeting keeps today's fields, prep, the buyer, five minutes, a closing read", () => {
   const variant = salesVariant({ [CALL_TYPE_KEY]: PITCH_MEETING })
   assert.deepEqual(keys({ [CALL_TYPE_KEY]: PITCH_MEETING }), [
     CALL_TYPE_KEY,
@@ -49,7 +49,7 @@ test("a pitch meeting keeps today's fields, prep, Cole, five minutes, a closing 
     "objections",
   ])
   assert.equal(variant.prep, true)
-  assert.equal(variant.personaId, "buyer-01")
+  assert.equal(variant.archetypeId, "operator_buyer")
   assert.equal(variant.roomMinutes, 5)
   assert.equal(variant.closingRead, true)
   assert.deepEqual(
@@ -76,7 +76,7 @@ test("a booked cold call suggests the pitch meeting with offering and prospect c
     "booked"
   )
   assert.ok(next)
-  assert.equal(next.label, "Prep the meeting with Cole")
+  assert.equal(next.label, "Prep the meeting")
   assert.deepEqual(next.scope, {
     [CALL_TYPE_KEY]: PITCH_MEETING,
     offering: "CourtFlow",

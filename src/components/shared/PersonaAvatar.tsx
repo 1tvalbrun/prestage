@@ -1,3 +1,4 @@
+import Image from "next/image"
 import { cn } from "@/lib/utils"
 
 const SIZES = {
@@ -16,16 +17,17 @@ export const personaInitials = (name: string): string =>
     .join("")
     .toUpperCase()
 
-// Neutral initials disc with an optional "available" dot — the stand-in
-// until persona photography lands. Deliberately colorless: lanes carry no
-// identity color.
+// A round portrait, or a neutral initials disc when there is no photo.
+// Deliberately colorless: lanes carry no identity color.
 export const PersonaAvatar = ({
   name,
+  image,
   size = "md",
   available,
   className,
 }: {
   name: string
+  image?: string
   size?: keyof typeof SIZES
   available?: boolean
   className?: string
@@ -33,12 +35,16 @@ export const PersonaAvatar = ({
   <span
     aria-label={available ? `${name}, available` : name}
     className={cn(
-      "relative grid flex-none place-items-center rounded-full border border-line-2 bg-surface-2 font-semibold text-on-surface-2",
+      "relative grid flex-none place-items-center overflow-hidden rounded-full border border-line-2 bg-surface-2 font-semibold text-on-surface-2",
       SIZES[size],
       className
     )}
   >
-    {personaInitials(name)}
+    {image ? (
+      <Image src={image} alt="" fill sizes="64px" className="object-cover object-top" />
+    ) : (
+      personaInitials(name)
+    )}
     {available && (
       <span
         aria-hidden="true"

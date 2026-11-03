@@ -148,11 +148,11 @@ const coldFormSections: PackCopy["form"]["sections"] = [
 ]
 
 export const pitchPreview: PackCopy["preview"] = {
-  title: "What Cole will read",
+  title: "What the buyer will read",
   rows: [
     { key: "offering", label: "Selling", hint: "Not yet named" },
-    { key: "description", label: "What it does", hint: "The problem it removes, in Cole's terms" },
-    { key: "prospect", label: "Across the table", hint: "Who Cole is playing" },
+    { key: "description", label: "What it does", hint: "The problem it removes, in the buyer's terms" },
+    { key: "prospect", label: "Across the table", hint: "Who the buyer is playing" },
   ],
   chips: { label: "Ask and objections", keys: ["ask", "objections"] },
   footer: "Only what you put here makes it in; gaps become questions, not guesses.",
@@ -162,7 +162,7 @@ export const pitchPanelLead =
   "The buyer reads your scope and materials before the room opens. Expect the objections you named, and a few you didn't."
 
 const coldPanelLead =
-  "Greg doesn't know you're calling and hasn't read a thing. He picks up, you talk, and he decides whether you get thirty seconds more."
+  "They don't know you're calling and haven't read a thing. They pick up, you talk, and they decide whether you get thirty seconds more."
 
 export const isColdCall = (scope: Scope): boolean => scopeText(scope, CALL_TYPE_KEY) === COLD_CALL
 
@@ -171,7 +171,7 @@ export const salesVariant = (scope: Scope): PracticeVariant => {
     return {
       scopeFields: COLD_FIELDS,
       prep: false,
-      personaId: "prospect-01",
+      archetypeId: "cold_prospect",
       roomMinutes: COLD_CALL_MINUTES,
       closingRead: false,
       remembers: false,
@@ -183,7 +183,7 @@ export const salesVariant = (scope: Scope): PracticeVariant => {
   return {
     scopeFields: chosen ? PITCH_FIELDS : [callTypeField],
     prep: true,
-    personaId: "buyer-01",
+    archetypeId: "operator_buyer",
     roomMinutes: 5,
     closingRead: true,
     remembers: true,
@@ -192,15 +192,15 @@ export const salesVariant = (scope: Scope): PracticeVariant => {
   }
 }
 
-// A booked cold call earns the meeting: prep it with Cole, with what the
-// seller already typed carried over.
+// A booked cold call earns the meeting: prep it with the buyer, with what
+// the seller already typed carried over.
 export const salesNextStep = (
   scope: Scope,
   verdict: string
 ): { label: string; scope: Scope } | null =>
   isColdCall(scope) && verdict === "booked"
     ? {
-        label: "Prep the meeting with Cole",
+        label: "Prep the meeting",
         scope: {
           [CALL_TYPE_KEY]: PITCH_MEETING,
           offering: scopeText(scope, "offering"),

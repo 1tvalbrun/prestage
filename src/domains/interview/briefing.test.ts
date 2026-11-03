@@ -38,6 +38,7 @@ test("a fresh session frames the role and works from the question plan", () => {
     audit: null,
     blueprint: makeBlueprint(),
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   assert.match(briefing.personalityPreamble, /interviewing a candidate for "ICU Nurse"/)
@@ -56,6 +57,7 @@ test("a session without a usable blueprint still frames the role and never menti
     audit: null,
     blueprint: failed,
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   assert.match(briefing.personalityPreamble, /ICU Nurse/)
@@ -72,6 +74,7 @@ test("honest scoping appears exactly when verifyTopics is non-empty, above candi
       candidateHooks: ["Led the Epic migration"],
     }),
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   const scopingAt = briefing.personalityPreamble.indexOf("Georgia nursing license renewal")
@@ -84,6 +87,7 @@ test("honest scoping appears exactly when verifyTopics is non-empty, above candi
     audit: null,
     blueprint: makeBlueprint(),
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   assert.doesNotMatch(clean.personalityPreamble, /never state statutes/i)
@@ -107,6 +111,7 @@ test("under budget pressure, sections drop whole from the back: hooks go before 
     audit: null,
     blueprint: longPlan,
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   // Sanity: the full section set genuinely exceeds the budget…
@@ -123,6 +128,7 @@ test("a resume digests recent turns in speech order and never re-introduces", ()
     audit: null,
     blueprint: makeBlueprint(),
     continuity: null,
+    counterpartFirstName: "Greg",
     transcript: [
       { text: "My answer about escalation", type: "user", timestamp: 2000, spokenAt: 5000 },
       { text: "How do you escalate?", type: "panelist", timestamp: 1000, spokenAt: 1000 },
@@ -153,6 +159,7 @@ test("open commitments drive the opener and forbid re-introduction", () => {
       ],
       updatedAt: 1,
     },
+    counterpartFirstName: "Greg",
     transcript: [],
   })
   assert.match(briefing.startScript, /last time you said you'd prepare a second conflict story/i)

@@ -49,25 +49,32 @@ export type VerdictTone = "good" | "mid" | "bad"
 export type VerdictOption = { value: string; label: string; tone: VerdictTone }
 export type VerdictVocabulary = { options: VerdictOption[]; fallback: string }
 
-// An interviewer identity. The spoken personality lives on the Runway
-// Character; these fields feed UI labels and the debrief prompts. attack is
-// the meet card's "what they come for" line; bio and tags feed persona
-// cards.
+// A role in a lane: everything about behavior and the copy that describes
+// it. attack is the meet card's "what they come for" line; bio and tags
+// feed persona cards; signature is the card's serif quote.
 export type AttackSegment = { text: string; strong?: boolean }
+export type Archetype = {
+  id: string
+  role: string
+  shortRole: string
+  tone: string
+  attack: AttackSegment[]
+  bio: string
+  tags: string[]
+  signature: string
+}
+
+// One face for an archetype. Only what differs between faces lives here;
+// the spoken personality lives on the Runway Character.
 export type Persona = {
   id: string
   archetypeId: string
   name: string
-  role: string
-  shortRole: string
-  tone: string
   image: string
-  attack: AttackSegment[]
-  bio: string
-  tags: string[]
-  // Their signature opening question, rendered as the card's serif quote.
-  signature: string
 }
+
+// A persona resolved against its archetype: what every screen reads.
+export type Counterpart = Persona & Omit<Archetype, "id">
 
 // "Dr. Sarah Okafor" → "Sarah", never "Dr." — honorifics end in a period.
 export const firstNameOf = (name: string): string =>
@@ -116,6 +123,8 @@ export type BriefingInput = {
   // The interview lane's prep artifact; other lanes never receive one.
   blueprint?: Blueprint | null
   continuity: Continuity | null
+  // The face this session is with, for start scripts that say a name.
+  counterpartFirstName: string
   transcript: { text: string; type: "user" | "panelist"; timestamp: number; spokenAt?: number }[]
 }
 
@@ -297,8 +306,9 @@ export type PracticeVariant = {
   scopeFields: ScopeField[]
   // Whether the read and prep stages run before the panel.
   prep: boolean
-  // The one persona this practice faces; null lets the panel offer a choice.
-  personaId: string | null
+  // The one archetype this practice faces; null lets the counterpart stage
+  // offer a choice. The face comes from the practice's cast.
+  archetypeId: string | null
   roomMinutes: number
   // Whether the panelist lands a closing read (and the room may end on it).
   closingRead: boolean
@@ -364,11 +374,11 @@ export type DomainPack = {
   // card ("Session 4 · CourtTime · Data recovery"). Absent means the lane
   // has no per-session focus; the shortLabel shows instead.
   sessionMetaField?: string
-  // Pack-supplied persona recommendation, consulted after "you faced them
-  // last time" and before the generic focusAreas heuristic. Null means no
-  // opinion.
-  recommendPersona?: (scope: Scope) => { personaId: string; reason: string } | null
+  // Pack-supplied archetype recommendation for the chooser, consulted
+  // before the generic focusAreas heuristic. Null means no opinion.
+  recommendArchetype?: (scope: Scope) => { archetypeId: string; reason: string } | null
   copy: PackCopy
+  archetypes: Archetype[]
   personas: Persona[]
   // Session-personality preamble rules and the per-session briefing builder,
   // composed by /api/avatar/connect.

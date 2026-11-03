@@ -3,8 +3,8 @@ import { salesPack } from "./sales/pack.ts"
 import { auditPack } from "./audit/pack.ts"
 import { interviewPack } from "./interview/pack.ts"
 import type {
+  Archetype,
   DomainPack,
-  Persona,
   PracticeVariant,
   Scope,
   VerdictOption,
@@ -34,7 +34,7 @@ export const variantOf = (pack: DomainPack, scope: Scope): PracticeVariant =>
   pack.variant?.(scope) ?? {
     scopeFields: pack.scopeFields,
     prep: true,
-    personaId: null,
+    archetypeId: null,
     roomMinutes: ROOM_MS / 60_000,
     closingRead: true,
     remembers: true,
@@ -46,11 +46,11 @@ export const variantOf = (pack: DomainPack, scope: Scope): PracticeVariant =>
     },
   }
 
-// The one panelist a practice can face, when there is exactly one: the
-// variant locks them, or the lane has a single persona.
-export const lockedPersona = (pack: DomainPack, variant: PracticeVariant): Persona | null =>
-  pack.personas.find((persona) => persona.id === variant.personaId) ??
-  (pack.personas.length === 1 ? pack.personas[0] : null)
+// The one archetype a practice can face, when there is exactly one: the
+// variant locks it, or the lane has a single role.
+export const lockedArchetype = (pack: DomainPack, variant: PracticeVariant): Archetype | null =>
+  pack.archetypes.find((archetype) => archetype.id === variant.archetypeId) ??
+  (pack.archetypes.length === 1 ? pack.archetypes[0] : null)
 
 // Cross-lane verdict lookup for surfaces that mix practices from several
 // packs (badges, session lists). Values are distinct across packs by

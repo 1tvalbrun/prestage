@@ -19,6 +19,7 @@ import {
 import { parseDebrief } from "../src/lib/debrief"
 import { createOpenAI, modelSettings } from "../src/lib/openai"
 import { getPack, variantOf } from "../src/domains/registry"
+import { resolveCounterpart } from "../src/domains/cast"
 import type { DomainPack } from "../src/domains/types"
 import { ROOM_MS } from "../src/lib/roomClock"
 import { IDLE_END_MS, IDLE_PROMPT_MS } from "../src/lib/idleRule"
@@ -66,7 +67,7 @@ export const insertSessionForPersona = async (
   personaId: string,
   micCheck?: Infer<typeof micCheckValidator>
 ): Promise<Id<"sessions">> => {
-  const persona = pack.personas.find((p) => p.id === personaId)
+  const persona = resolveCounterpart(pack, personaId)
   if (!persona) throw new Error("Unknown persona")
   const avatar = await ctx.db
     .query("avatars")
@@ -106,7 +107,10 @@ const isMeasuredLevel = (db: number): boolean => Number.isFinite(db) && db >= MI
 export const create = mutation({
   args: {
     practiceId: v.id("practices"),
-    personaId: v.string(),
+    // A chooser lane's first session names the role; the server picks the
+    // face from the practice's cast. Refused if it names a different role
+    // once the practice has a face.
+    archetypeId: v.optional(v.string()),
     micCheck: v.optional(micCheckValidator),
   },
   handler: async (ctx, args) => {
@@ -122,6 +126,18 @@ export const create = mutation({
       )
       .first()
     if (live) return live._id
+    const fixedArchetypeId = practice.personaId
+      ? resolveCounterpart(getPack(practice.packId), practice.personaId)?.archetypeId
+      : undefined
+    if (args.archetypeId && fixedArchetypeId && args.archetypeId !== fixedArchetypeId) {
+      throw new Error("This practice's counterpart is already set")
+    }
+    const drawn =
+      args.archetypeId && practice.cast && Object.hasOwn(practice.cast, args.archetypeId)
+        ? practice.cast[args.archetypeId]
+        : undefined
+    const personaId = practice.personaId ?? drawn
+    if (!personaId) throw new Error("No counterpart for this practice")
     const micCheck =
       args.micCheck && isMeasuredLevel(args.micCheck.noiseDb) && isMeasuredLevel(args.micCheck.voiceDb)
         ? args.micCheck
@@ -130,14 +146,11 @@ export const create = mutation({
       ctx,
       practice,
       getPack(practice.packId),
-      args.personaId,
+      personaId,
       micCheck
     )
-    // The practice remembers who it's with; the next session defaults to
-    // the same persona.
-    if (practice.personaId !== args.personaId) {
-      await ctx.db.patch(args.practiceId, { personaId: args.personaId })
-    }
+    // The first session fixes the practice's face for life.
+    if (!practice.personaId) await ctx.db.patch(args.practiceId, { personaId })
     return sessionId
   },
 })

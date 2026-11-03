@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Archive, ChevronRight, Search, Trash2, Video, X } from "lucide-react"
@@ -10,8 +11,8 @@ import type { Id } from "@convex/_generated/dataModel"
 import { cn, relativeDay } from "@/lib/utils"
 import { filterPractices } from "@/lib/findPractices"
 import { getPack, isPackId } from "@/domains/registry"
+import { laneFaces, resolveCounterpart } from "@/domains/cast"
 import { BTN_PRIMARY, BTN_SECONDARY } from "@/components/shared/buttons"
-import { personaInitials } from "@/components/shared/PersonaAvatar"
 import { LaneBadge } from "@/components/shared/LaneBadge"
 import { PersonaAvatar } from "@/components/shared/PersonaAvatar"
 import {
@@ -31,9 +32,7 @@ const greeting = (hour: number) =>
   hour < 5 ? "Good night" : hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening"
 
 const personaFor = (practice: PracticeRow) =>
-  practice.personaId
-    ? getPack(practice.packId).personas.find((persona) => persona.id === practice.personaId) ?? null
-    : null
+  practice.personaId ? resolveCounterpart(getPack(practice.packId), practice.personaId) : null
 
 const ResumeHero = ({ practice }: { practice: PracticeRow }) => {
   const router = useRouter()
@@ -70,7 +69,7 @@ const ResumeHero = ({ practice }: { practice: PracticeRow }) => {
           wrapping one word per line. */}
       <div className="flex items-center gap-[18px] rounded-2xl border border-line bg-surface-raised px-6 py-5 shadow-card max-lg:flex-wrap max-lg:gap-y-4 max-lg:px-5 max-lg:py-4">
         {persona && (
-          <PersonaAvatar name={persona.name} size="lg" available />
+          <PersonaAvatar name={persona.name} image={persona.image} size="lg" available />
         )}
         <div className="min-w-0 flex-1 max-lg:min-w-[65%]">
           <div className="flex flex-wrap items-center gap-2.5">
@@ -190,7 +189,7 @@ const PracticeCard = ({
       </div>
       {persona && (
         <div className="mb-2.5 flex items-center gap-2">
-          <PersonaAvatar name={persona.name} size="sm" />
+          <PersonaAvatar name={persona.name} image={persona.image} size="sm" />
           <span className="text-[12.5px] text-on-surface-3">
             with {persona.name}, {persona.shortRole.toLowerCase()}
           </span>
@@ -236,15 +235,15 @@ const FirstRun = ({ lanes }: { lanes: string[] }) => (
             className="group relative flex flex-col overflow-hidden rounded-2xl border border-line bg-surface-raised px-[22px] pb-[18px] pt-[22px] shadow-card transition hover:-translate-y-0.5 hover:bg-surface-2"
           >
             <span className="mb-3.5 flex h-10">
-              {pack.personas.slice(0, 3).map((persona, i) => (
+              {laneFaces(pack, 3).map((face, i) => (
                 <span
-                  key={persona.id}
+                  key={face.id}
                   className={cn(
-                    "grid h-10 w-10 flex-none place-items-center rounded-full border-2 border-surface-raised bg-surface-2 text-[13px] font-semibold text-on-surface-2",
+                    "relative h-10 w-10 flex-none overflow-hidden rounded-full border-2 border-surface-raised bg-surface-2",
                     i > 0 && "-ml-2.5"
                   )}
                 >
-                  {personaInitials(persona.name)}
+                  <Image src={face.image} alt="" fill sizes="40px" className="object-cover object-top" />
                 </span>
               ))}
             </span>
