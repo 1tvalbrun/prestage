@@ -1,8 +1,8 @@
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
-/node_modules
-/.pnp
+node_modules/
+.pnp
 .pnp.*
 .yarn/*
 !.yarn/patches
@@ -11,15 +11,15 @@
 !.yarn/versions
 
 # testing
-/coverage
-/.pdf-fixtures/
+coverage/
+.pdf-fixtures/
 
 # next.js
-/.next/
-/out/
+.next/
+out/
 
 # production
-/build
+build/
 
 # misc
 .DS_Store
@@ -48,5 +48,10 @@ next-env.d.ts
 /docs/reference/
 
 # impeccable outputs regenerated from DESIGN.md and critique runs; keep only the live config
-/.impeccable/design.json
-/.impeccable/critique/
+**/.impeccable/design.json
+**/.impeccable/critique/
+
+# impeccable hook state (local only)
+**/.impeccable/hook.cache.json
+**/.impeccable/hook.pending.json
+**/.impeccable/config.local.json

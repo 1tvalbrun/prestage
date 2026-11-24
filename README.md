@@ -28,20 +28,31 @@ The product does not make things up, and that rule lives in the types, not in a 
 
 Next.js and Convex (database, server functions, realtime, crons), Clerk (auth), Runway Characters (`@runwayml/avatars-react`), AssemblyAI streaming transcription, OpenAI for the read, the audit, the room's orchestration, and the debrief.
 
-## Setup
+## Repo layout
+
+A pnpm monorepo. apps/ holds deployable apps; packages/ holds shared code.
+
+- `apps/app/`: the Prestage Next.js app (`@prestage/app`), with its Convex backend in `apps/app/convex/`
+- `packages/`: shared code (empty for now)
+- `docs/`: engineering standards, cast docs, plans and specs
+
+## Running locally
 
 ```bash
-pnpm install
-npx convex dev        # provisions the backend, watches functions
-pnpm dev              # http://localhost:3000
+pnpm install                                  # from the repo root
+cd apps/app && npx convex dev                 # watches Convex functions against the dev deployment
+# Pushes this branch's functions and schema to the shared dev deployment, replacing any other branch's. Check which branch is deployed before running it.
+pnpm dev:app                                  # from the root, in another terminal: http://localhost:3000
 ```
 
-In `.env.local` (read by the Next server and the client build):
+## Setup
+
+In `apps/app/.env.local` (read by the Next server and the client build):
 
 - `RUNWAYML_API_SECRET`, `ASSEMBLYAI_API_KEY`
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in`
 
-In the Convex deployment, set with `npx convex env set NAME value` (read by Convex actions, which never see `.env.local`):
+In the Convex deployment, set with `npx convex env set NAME value` from `apps/app` (read by Convex actions, which never see `.env.local`):
 
 - `RUNWAYML_API_SECRET`, `OPENAI_API_KEY`
 - `CLERK_JWT_ISSUER_DOMAIN`: the Clerk instance's issuer URL (`https://….clerk.accounts.dev`). Convex validates the session JWT against it; also create a JWT template named `convex` in the Clerk dashboard.
@@ -49,7 +60,7 @@ In the Convex deployment, set with `npx convex env set NAME value` (read by Conv
 
 `npx convex dev` writes `NEXT_PUBLIC_CONVEX_URL` for you.
 
-Avatars are registered per persona, on each deployment, from the CLI (add `--prod` for production):
+Avatars are registered per persona, on each deployment, from the CLI in `apps/app` (add `--prod` for production):
 
 ```bash
 npx convex run avatars:register '{"packId":"founder","personaId":"vc-01","runwayAvatarId":"…"}'
@@ -62,12 +73,12 @@ Auth is Clerk, invite-only: sign-up is Restricted in the Clerk dashboard, and te
 ## Checks
 
 ```bash
-pnpm test             # unit tests
+pnpm test:app                                    # unit tests
 pnpm lint
-npx tsc --noEmit -p .
-pnpm eval:signoff     # the sign-off detector against recorded windows; needs OPENAI_API_KEY in .env.local
+npx tsc --noEmit -p apps/app
+pnpm --filter @prestage/app eval:signoff         # the sign-off detector against recorded windows; needs OPENAI_API_KEY in apps/app/.env.local
 ```
 
 ## Deploy
 
-Vercel builds run `npx convex deploy --cmd 'pnpm build'` (see `vercel.json`), so the Convex functions and the app ship together. Engineering standards live in [docs/engineering-standards.md](docs/engineering-standards.md).
+Vercel builds the project from Root Directory `apps/app` and runs `npx convex deploy --cmd 'pnpm build'` (see `apps/app/vercel.json`), so the Convex functions and the app ship together. Engineering standards live in [docs/engineering-standards.md](docs/engineering-standards.md).

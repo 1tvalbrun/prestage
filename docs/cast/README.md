@@ -1,6 +1,6 @@
 # Cast
 
-One file per lane in `personalities/`, with a section per role, nine roles in all, each with `{{name}}` where the face's name goes. Every face in a role carries the same personality; the role is the personality, the face is casting. Name, photo, and voice are the only things that differ within a role, and all three live in the tables below. `scripts/push-personalities.ts` joins a role's file to each face in this table and updates the Character through the Runway API; `--dry-run` shows the diff first.
+One file per lane in `personalities/`, with a section per role, nine roles in all, each with `{{name}}` where the face's name goes. Every face in a role carries the same personality; the role is the personality, the face is casting. Name, photo, and voice are the only things that differ within a role, and all three live in the tables below. `apps/app/scripts/push-personalities.ts` (`pnpm --filter @prestage/app cast:push`) joins a role's file to each face in this table and updates the Character through the Runway API; `--dry-run` shows the diff first.
 
 Heritage labels live in the design notes only. They never appear in the product, in a persona bio, or in a personality.
 
@@ -46,7 +46,7 @@ Each avatar gets a custom voice generated from a description. The rule: accent f
 
 ## Images
 
-All in `public/avatars/`, slug-named, downscaled to 1920px wide (the largest render is the counterpart stage's 5:3 tile). Runway holds the originals. New images are 16:9 to match the landscape tile.
+All in `apps/app/public/avatars/`, slug-named, downscaled to 1920px wide (the largest render is the counterpart stage's 5:3 tile). Runway holds the originals. New images are 16:9 to match the landscape tile.
 
 ## Runway Character ids
 
