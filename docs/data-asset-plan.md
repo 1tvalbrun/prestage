@@ -16,32 +16,32 @@ none of it should ship before an attorney reviews it.
 ### Top risks
 
 1. **The current terms forbid the target use.** Privacy says data is used "Solely to run the
-   service" (`src/app/privacy/page.tsx:38`). Terms grant only "the limited license needed to
-   operate the service" (`src/app/terms/page.tsx:37-39`). Nothing in either covers training,
+   service" (`apps/app/src/app/privacy/page.tsx:38`). Terms grant only "the limited license needed to
+   operate the service" (`apps/app/src/app/terms/page.tsx:37-39`). Nothing in either covers training,
    research, licensing, or transfer of the data itself. Every existing record was collected
    under that promise. Using it for training would require a retroactive terms change, which
    is the pattern FTC staff has warned against.
 2. **Deletion does not match the promise.** `usageEvents` survive both account deletion and
-   practice deletion (`convex/users.ts:70-103`, `convex/practices.ts:455-476`). There is no
-   `by_user` index to find them (`convex/schema.ts:310`). Dev already holds 155 usage rows
+   practice deletion (`apps/app/convex/users.ts:70-103`, `apps/app/convex/practices.ts:455-476`). There is no
+   `by_user` index to find them (`apps/app/convex/schema.ts:310`). Dev already holds 155 usage rows
    pointing at deleted practices. Both deletes also run as a single unbounded transaction,
    which will fail once a user has enough data.
 3. **The most valuable raw signal is discarded at capture.** The spoken intake pitch exists
-   only in React state (`src/app/(flow)/simulation/new/page.tsx:123-137`). Raw model output is
-   never stored; the code says so itself (`src/lib/debrief.ts:164-167`). Avatar audio-onset
+   only in React state (`apps/app/src/app/(flow)/simulation/new/page.tsx:123-137`). Raw model output is
+   never stored; the code says so itself (`apps/app/src/lib/debrief.ts:164-167`). Avatar audio-onset
    timing and user turn end times are measured in the browser and then thrown away
-   (`src/lib/founderTranscription.ts:17-19, 93-96`,
-   `src/components/simulation/room/SessionStatusBridge.tsx:44-53`).
+   (`apps/app/src/lib/founderTranscription.ts:17-19, 93-96`,
+   `apps/app/src/components/simulation/room/SessionStatusBridge.tsx:44-53`).
 4. **Prep artifacts are overwritten in place.** The audit, blueprint, continuity, and Runway
    session id all keep only the latest value (§B). A session therefore cannot be replayed
    against the prep it was actually briefed with.
 5. **No consent state exists beyond one clickwrap version.** `users.termsVersion` is set once
-   and never re-prompted (`convex/users.ts:37-45`). The schema comment says bumping the
-   version re-prompts users (`convex/schema.ts:123`), but no code does that. Nothing is
+   and never re-prompted (`apps/app/convex/users.ts:37-45`). The schema comment says bumping the
+   version re-prompts users (`apps/app/convex/schema.ts:123`), but no code does that. Nothing is
    recorded per practice or per session.
 6. **The processor list is incomplete.** The app is deployed on Vercel (`vercel.json:2`),
-   but Vercel is not on the processor list (`src/app/privacy/page.tsx:46-52`). Convex
-   logs also receive user content: `src/lib/debrief.ts:170-173` logs up to 500 characters of
+   but Vercel is not on the processor list (`apps/app/src/app/privacy/page.tsx:46-52`). Convex
+   logs also receive user content: `apps/app/src/lib/debrief.ts:170-173` logs up to 500 characters of
    model output.
 
 ### Top gaps against the target state
@@ -68,11 +68,11 @@ training costs essentially nothing, so the plan treats it as permanently exclude
 Legend: **W** = where written. **Overwrite** = replaced in place. **Delete** = deleted by
 what.
 
-#### `users` (`convex/schema.ts:117-126`)
+#### `users` (`apps/app/convex/schema.ts:117-126`)
 
 | Field | Stores | W | Overwrite | Delete |
 |---|---|---|---|---|
-| clerkId | Clerk subject | `convex/users.ts:39` | never | `users.deleteAccount` (`users.ts:102`) |
+| clerkId | Clerk subject | `apps/app/convex/users.ts:39` | never | `users.deleteAccount` (`users.ts:102`) |
 | displayName | Clerk name at onboarding | `users.ts:40` | never (stale if renamed at Clerk) | same |
 | lanes, defaultLane | Lanes enabled | `users.ts:41-42`, `addLane` `users.ts:62` | lanes append-only | same |
 | termsAcceptedAt, termsVersion | One clickwrap record | `users.ts:43-44` | never; no re-accept path exists | same |
@@ -80,7 +80,7 @@ what.
 #### `avatars` (`schema.ts:132-138`)
 
 Persona to Runway Character mapping. Written only by the CLI `avatars.register`, which
-upserts in place (`convex/avatars.ts:31-35`). No user data.
+upserts in place (`apps/app/convex/avatars.ts:31-35`). No user data.
 
 #### `practices` (`schema.ts:143-204`)
 
@@ -128,14 +128,14 @@ path**, and there is no `by_user` index.
 |---|---|---|---|---|
 | practiceId, name, fileType, size | Upload metadata | `practices.ts:59-66` | never | `practices.remove` `practices.ts:470-473`, `deleteAccount` `users.ts:81-88` |
 | storageId | The file, while extracting only | `practices.ts:61` | **cleared after extraction** (`materials.ts:68-69`) | blob deleted at extraction |
-| text | Extracted text, clamped at 80,000 chars (`src/lib/materials.ts:8, 64-66`) | `materials.ts:69` | once | as above |
+| text | Extracted text, clamped at 80,000 chars (`apps/app/src/lib/materials.ts:8, 64-66`) | `materials.ts:69` | once | as above |
 | status, failureReason | Extraction outcome | `materials.ts:69` | once | as above |
 
 #### `_storage`
 
 Upload blobs. Deleted at extraction (`materials.ts:68`). Orphans (abandoned intake uploads,
 autofill-only uploads) are deleted by the hourly sweep once they are 24 hours old
-(`convex/crons.ts:8`, `materials.ts:76-94`). Blobs carry no owner.
+(`apps/app/convex/crons.ts:8`, `materials.ts:76-94`). Blobs carry no owner.
 
 #### Generated, then discarded
 
@@ -143,9 +143,9 @@ autofill-only uploads) are deleted by the hourly sweep once they are 24 hours ol
 |---|---|---|
 | Spoken intake pitch transcript (up to 90s) | React state, passed to `extractScope`, dropped | `TellIt.tsx:10, 30-32`; `new/page.tsx:123-127`; `extractScope` writes nothing but usage (`practices.ts:683-721`) |
 | Extracted scope "heard" from voice, before user edits | `ConfirmBrief` state; only the final edited scope is stored | `ConfirmBrief.tsx:41`; `new/page.tsx:132` |
-| Deck text extracted for autofill | Returned only as scope; the text is dropped in `scopeFromUpload` | `convex/ingest.ts:84-99`. It is re-extracted into `materials.text` **only if** the upload is submitted with the practice (`new/page.tsx:147`) |
-| Which fields were AI-inferred vs typed | Client `inferredKeys` | `src/lib/autofill.ts:16-30` |
-| Raw model output, every call | Parsed, then dropped | `practices.ts:642-661, 905-911`; `blueprints.ts:210-215`; `orchestrator.ts:96-104`; `sessions.ts:497-504, 718-728`; acknowledged at `src/lib/debrief.ts:164-167` |
+| Deck text extracted for autofill | Returned only as scope; the text is dropped in `scopeFromUpload` | `apps/app/convex/ingest.ts:84-99`. It is re-extracted into `materials.text` **only if** the upload is submitted with the practice (`new/page.tsx:147`) |
+| Which fields were AI-inferred vs typed | Client `inferredKeys` | `apps/app/src/lib/autofill.ts:16-30` |
+| Raw model output, every call | Parsed, then dropped | `practices.ts:642-661, 905-911`; `blueprints.ts:210-215`; `orchestrator.ts:96-104`; `sessions.ts:497-504, 718-728`; acknowledged at `apps/app/src/lib/debrief.ts:164-167` |
 | Items the parsers drop | Silent, except one `console.warn` | ungrounded `heldUp` quotes (`debrief.ts:93-96`); unparseable action items (`debrief.ts:169-174`, warn); claims demoted to gaps (`audit.ts:109-122`); caps (`audit.ts:103, 127`); invalid note types (`orchestrator.ts:107-118`); malformed sign-off output (`sessions.ts:502-504`) |
 | Composed Runway personality and startScript | Sent to Runway, never stored | `avatars.ts:181-245` |
 | Rendered prompts (all calls) | Never stored | all call sites in §C |
@@ -169,30 +169,30 @@ autofill-only uploads) are deleted by the hourly sweep once they are 24 hours ol
 | runwaySessionId | Overwritten on each of up to 5 connects. Earlier Runway conversation records lose their only reference. Prod: only 2 of 7 sessions have one at all. | `sessions.ts:278-281, 356-361`; `usage.ts:72` |
 | 240-turn cap | Turns beyond 240 are silently refused. No real session has reached it (max 39 prod, 34 dev). | `sessions.ts:49-52, 238` |
 | Material files | Deleted when extraction settles; only the clamped text is kept. No material versions; a re-upload is a new row. | `materials.ts:64-69`; `schema.ts:312-315` |
-| Material text truncation | Text beyond 80k chars is cut with `[truncated]`. | `src/lib/materials.ts:64-66` |
+| Material text truncation | Text beyond 80k chars is cut with `[truncated]`. | `apps/app/src/lib/materials.ts:64-66` |
 | signOff | Cleared when the conversation continues or the user dismisses it. | `sessions.ts:429, 448` |
 | Terms acceptance | Single version, never re-recorded. | `users.ts:37` |
 
 ### C. AI call map
 
 No call records latency. No prompt carries a version. Prompts live in git; the founder
-prompt module says tests pin its load-bearing lines (`src/domains/founder/prompts.ts:11-14`).
-Model tiers come from `src/lib/openai.ts:10-30`. Prod usage shows `gpt-5-nano` and
+prompt module says tests pin its load-bearing lines (`apps/app/src/domains/founder/prompts.ts:11-14`).
+Model tiers come from `apps/app/src/lib/openai.ts:10-30`. Prod usage shows `gpt-5-nano` and
 `gpt-5-mini` in use (§I).
 
 | Call | Purpose | Tier | Prompt lives | Persisted |
 |---|---|---|---|---|
-| `practices.analyze` (`practices.ts:609-677`) | Read stage: brief to context fields | fast | `src/domains/<lane>/prompts.ts` `analyzeSystem`/`analyzeUser` | parsed `context`; usage (model, tokens). A parse failure throws and reverts to draft (`practices.ts:658, 673`) |
-| `practices.extractScope` (`practices.ts:683-721`) | Voice or deck to partial scope | fast | `prompts.ts` `extractScope` + `DECK_EXTRACTION_CAUTION` (`src/lib/intake.ts:9`) | usage only, **no practiceId** (`practices.ts:709-715`). Input and output go back to the client |
+| `practices.analyze` (`practices.ts:609-677`) | Read stage: brief to context fields | fast | `apps/app/src/domains/<lane>/prompts.ts` `analyzeSystem`/`analyzeUser` | parsed `context`; usage (model, tokens). A parse failure throws and reverts to draft (`practices.ts:658, 673`) |
+| `practices.extractScope` (`practices.ts:683-721`) | Voice or deck to partial scope | fast | `prompts.ts` `extractScope` + `DECK_EXTRACTION_CAUTION` (`apps/app/src/lib/intake.ts:9`) | usage only, **no practiceId** (`practices.ts:709-715`). Input and output go back to the client |
 | `ingest.scopeFromUpload` (`ingest.ts:78-100`) | Deck autofill; calls `extractScope` | fast | same | same; deck text dropped |
-| `generateAudit` (`practices.ts:822-923`) | Evidence audit | quality | `pack.prep.prompt` in `src/domains/{founder,sales,audit}/prompts.ts` | grounded claims, gaps, and closed; usage. Drops are silent |
-| `generateBlueprint` (`blueprints.ts:140-229`) | Interview plan and refine | quality | `src/domains/interview/prompts.ts` (`prep.prompt`, `prep.refine`) | parsed blueprint; usage. Parse failure stores a fixed message, raw output lost |
+| `generateAudit` (`practices.ts:822-923`) | Evidence audit | quality | `pack.prep.prompt` in `apps/app/src/domains/{founder,sales,audit}/prompts.ts` | grounded claims, gaps, and closed; usage. Drops are silent |
+| `generateBlueprint` (`blueprints.ts:140-229`) | Interview plan and refine | quality | `apps/app/src/domains/interview/prompts.ts` (`prep.prompt`, `prep.refine`) | parsed blueprint; usage. Parse failure stores a fixed message, raw output lost |
 | `orchestrator.decide` (`orchestrator.ts:24-129`) | Live note and topic | fast | `prompts.ts` `orchestrate` | note, topic; usage |
-| `sessions.checkSignOff` (`sessions.ts:458-518`) | Sign-off detection | fast | `SIGN_OFF_PROMPT` `src/lib/signOff.ts:74` | `signOff` stamp; usage |
-| `sessions.generateDebrief` (`sessions.ts:600-761`) | Debrief, verdict, continuity | quality | `prompts.ts` `debrief` + `VERDICT_RESTATE_DIRECTIVE` `src/lib/ending.ts:61` | parsed debrief, continuity; usage |
-| `avatars.mint` to Runway `POST /v1/realtime_sessions` (`avatars.ts:220-246`) | Panelist session | n/a (`gwm1_avatars`) | `pack.turnTaking` + `src/domains/<lane>/briefing.ts` + the Character's stored personality (`docs/cast/personalities/*.md`, pushed by `scripts/push-personalities.ts`) + `endingContract` (`src/lib/ending.ts`) | latest Runway id only; connect usage ($0.02 flat); `connectMs` |
+| `sessions.checkSignOff` (`sessions.ts:458-518`) | Sign-off detection | fast | `SIGN_OFF_PROMPT` `apps/app/src/lib/signOff.ts:74` | `signOff` stamp; usage |
+| `sessions.generateDebrief` (`sessions.ts:600-761`) | Debrief, verdict, continuity | quality | `prompts.ts` `debrief` + `VERDICT_RESTATE_DIRECTIVE` `apps/app/src/lib/ending.ts:61` | parsed debrief, continuity; usage |
+| `avatars.mint` to Runway `POST /v1/realtime_sessions` (`avatars.ts:220-246`) | Panelist session | n/a (`gwm1_avatars`) | `pack.turnTaking` + `apps/app/src/domains/<lane>/briefing.ts` + the Character's stored personality (`docs/cast/personalities/*.md`, pushed by `scripts/push-personalities.ts`) + `endingContract` (`apps/app/src/lib/ending.ts`) | latest Runway id only; connect usage ($0.02 flat); `connectMs` |
 | `avatars.fetchStoredPersonality` (`avatars.ts:63-85`) | Read the Character personality | n/a | n/a | nothing |
-| AssemblyAI streaming (`src/lib/founderTranscription.ts:202-232`, token `src/app/api/transcribe/token/route.ts`) | User speech to text, browser-direct | Universal-Streaming, `language_codes=en` | n/a | final text plus onset only (§D) |
+| AssemblyAI streaming (`apps/app/src/lib/founderTranscription.ts:202-232`, token `apps/app/src/app/api/transcribe/token/route.ts`) | User speech to text, browser-direct | Universal-Streaming, `language_codes=en` | n/a | final text plus onset only (§D) |
 | `scripts/eval-signoff.ts` | Offline sign-off eval | fast | `SIGN_OFF_PROMPT` | stdout only |
 
 Inputs sent: the analyze prompt receives the scope. The audit and blueprint prompts receive
@@ -200,7 +200,7 @@ the scope plus up to 60k chars of material text (`practices.ts:34, 859-869`;
 `blueprints.ts:33, 122-138`). The debrief receives the scope, the last 60k chars of
 transcript, live notes, continuity, and the sealed rubric (`sessions.ts:644-702`). Runway
 receives the scope, top gap titles, continuity, the sealed blueprint, and on reconnect a
-transcript digest (`avatars.ts:181-190`; `src/domains/founder/briefing.ts:40-49`).
+transcript digest (`avatars.ts:181-190`; `apps/app/src/domains/founder/briefing.ts:40-49`).
 
 ### D. Turn data
 
@@ -233,7 +233,7 @@ How speech state is tracked:
 
 ### E. Disclosure and consent audit
 
-Quoted text is current as of terms version `2026-08-03` (`src/lib/legal.ts:4`). One
+Quoted text is current as of terms version `2026-08-03` (`apps/app/src/lib/legal.ts:4`). One
 version string covers both Terms and Privacy (`LegalShell.tsx:16`).
 
 | Topic | Current language |
@@ -298,17 +298,17 @@ Copy inconsistency: Privacy says "ideas" (`privacy/page.tsx:70`), a pre-rename t
 
 | Item | Finding | Citation |
 |---|---|---|
-| `sessions.closeDeliveredAt` | Never written or read; 1 dev doc still carries it, 0 prod | `schema.ts:246-248`; comment-only refs `src/lib/ending.ts:6, 27` |
+| `sessions.closeDeliveredAt` | Never written or read; 1 dev doc still carries it, 0 prod | `schema.ts:246-248`; comment-only refs `apps/app/src/lib/ending.ts:6, 27` |
 | `transcript[].speaker` | Read only as a React key; duplicates `type` | `TranscriptPanel.tsx:88` |
 | `transcript[].speakerName` | Client-supplied, derivable from `type` and `persona.name` | `sessions.ts:213-214` |
-| `transcript[].timestamp` | Client clock, used as server-side ordering fallback and idle evidence | `sessions.ts:285`; `src/lib/transcript.ts:11-12` |
+| `transcript[].timestamp` | Client clock, used as server-side ordering fallback and idle evidence | `sessions.ts:285`; `apps/app/src/lib/transcript.ts:11-12` |
 | `materials.size` | Written, never read | `practices.ts:64` |
 | `sessions.connectMs`, `sessions.micCheck` | Write-only; stated calibration purpose with no reader | `schema.ts:46-48, 265-268` |
 | TERMS_VERSION re-prompt | The comment promises it; no code implements it | `schema.ts:123`; `legal.ts:1-3` |
 | `usageEvents` comment "quota enforcement adds by_user" | No by_user index, so deletion cannot find rows | `schema.ts:298-300` |
 | CLAUDE.md data notes | Refer to `ideas/simulations/rooms/reports` and "inherit ownership from their simulation"; the actual tables are practices and sessions | `CLAUDE.md` Key Decisions |
 | Dev deployment tables | `ideas`, `simulations`, `rooms`, `reports`, `audits` exist (all 0 rows), not in schema | `npx convex data` (dev) |
-| Abandoned sessions | No state; "stale" is derived at read time and a silent room never goes stale | `src/lib/session.ts:1-6` |
+| Abandoned sessions | No state; "stale" is derived at read time and a silent room never goes stale | `apps/app/src/lib/session.ts:1-6` |
 
 ### I. Beta data status
 
@@ -338,7 +338,7 @@ The effort column uses S, M, and L.
 
 - **Auth.** Every public function calls `requireIdentity`. Single-doc reads go through
   `ownedOrNull`. New internal-only tables (aiCalls, assessments, monthlySnapshots) have
-  **no public query at all**. Admin reads use `requireAdmin` in `convex/guard.ts`, built on
+  **no public query at all**. Admin reads use `requireAdmin` in `apps/app/convex/guard.ts`, built on
   `requireIdentity`: it compares `identity.subject` to the `ADMIN_CLERK_ID` Convex env var
   and fails closed when that var is unset.
 - **Ownership.** Every new user-data table carries `userId` (stamped server-side from the
@@ -382,7 +382,7 @@ The effort column uses S, M, and L.
   - Indexes: `by_user_kind ["userId","kind"]`, ordered by `_creationTime`.
   - Current state is **derived**: the latest event per kind, four `.first()` reads in desc
     order. There is no mutable "current" copy, which keeps one source of truth.
-- `CONSENT_VERSION` constant in `src/lib/legal.ts`, separate from `TERMS_VERSION` and a new
+- `CONSENT_VERSION` constant in `apps/app/src/lib/legal.ts`, separate from `TERMS_VERSION` and a new
   `PRIVACY_VERSION`, so each document re-versions independently.
 - `consentSnapshotValidator`: `{ version, training, outcomeFollowups, audioRetention,
   research, orgNeverTrain, laneExcluded, capturedAt }`.
@@ -393,7 +393,7 @@ The effort column uses S, M, and L.
   snapshot reads it when the identity carries an org claim. No orgs exist yet, so this
   table plus the snapshot field is the entire build.
 
-**Derived rule.** `trainingEligible(snapshot)` is a pure function in `src/lib/consent.ts`:
+**Derived rule.** `trainingEligible(snapshot)` is a pure function in `apps/app/src/lib/consent.ts`:
 
 ```
 snapshot?.training === true && !snapshot.orgNeverTrain && !snapshot.laneExcluded
@@ -422,7 +422,7 @@ touched. Account deletion overrides all of this.
   default off, and none is required to enter.
 - `/settings`: a "Your data" panel with the toggles, version, date, and a link to history.
 - Intake confirm step: the per-practice override.
-- Re-consent gate: `OnboardingGate` (`src/app/providers.tsx`) compares
+- Re-consent gate: `OnboardingGate` (`apps/app/src/app/providers.tsx`) compares
   `users.termsVersion`, `PRIVACY_VERSION`, and the latest consent version to the constants,
   and routes stale users to a re-accept screen.
 
@@ -502,16 +502,16 @@ truncation stays as-is (open question).
 
 **One source of truth.** Tokens and cost stay on `usageEvents`. `aiCalls` references them
 through `usageEventId`, and `promptVersion` is added to `usageEvents` as requested. One
-helper, `recordAiCall` in `convex/usage.ts`, replaces `recordUsage` at every call site and
+helper, `recordAiCall` in `apps/app/convex/usage.ts`, replaces `recordUsage` at every call site and
 writes both rows from a single input, so the two can never disagree.
 
 **PROMPT_VERSION.** One constant per prompt module:
 
-- `src/domains/<lane>/prompts.ts` (all prompts in the module share one version)
-- `src/lib/signOff.ts`
-- `src/lib/intake.ts`
-- `src/lib/ending.ts`
-- `src/domains/<lane>/briefing.ts`
+- `apps/app/src/domains/<lane>/prompts.ts` (all prompts in the module share one version)
+- `apps/app/src/lib/signOff.ts`
+- `apps/app/src/lib/intake.ts`
+- `apps/app/src/lib/ending.ts`
+- `apps/app/src/domains/<lane>/briefing.ts`
 
 The Runway personality version is the git hash of `docs/cast/personalities/<lane>.md`,
 recorded by `push-personalities.ts`. That needs an `avatars.personalityVersion` field.
@@ -599,7 +599,7 @@ are dropped; names are derived from `type` and `session.persona`.
   (`TranscriptBridge.tsx:83-90`). Fall back to chunk arrival when there is no edge.
 - **Derived fields.** An internal `finalizeTurns` mutation is scheduled at
   `endedAt + LATE_WRITE_GRACE_MS` (`sessions.ts:56`). It computes latency, overlap, and
-  barge-in once, from one pure function in `src/lib/turnTiming.ts`, sorted by spoken time.
+  barge-in once, from one pure function in `apps/app/src/lib/turnTiming.ts`, sorted by spoken time.
   It also writes a session rollup `timing: { userTurns, userSpokenMs, avatarSpokenMs,
   bargeIns, medianLatencyMs, fullTiming: boolean }` for the dashboard.
 
@@ -651,7 +651,7 @@ The readiness scale is pack-independent, so calibration works across lanes. The 
 
 **What exists.**
 
-- founder `stage` chips (`src/domains/founder/pack.ts:65`)
+- founder `stage` chips (`apps/app/src/domains/founder/pack.ts:65`)
 - interview `interviewType` and `seniority` (`interview/pack.ts:71, 76`)
 - sales call type and goal (`sales/variant.ts`)
 
@@ -791,7 +791,7 @@ validator.
 | upgrade, churn | later, with billing |
 
 **Conflict.** Abandonment today is derived at read time, and a silent room never goes stale
-(`src/lib/session.ts:1-6`). Recording `abandoned` requires adding `"abandoned"` to
+(`apps/app/src/lib/session.ts:1-6`). Recording `abandoned` requires adding `"abandoned"` to
 `endedReasonValidator` (widening, additive) plus a cron.
 
 ### 11. Deletion that matches the promise (Partial, M)
@@ -853,7 +853,7 @@ already carries both. No duplicate field is added to `materials`.
 
 ### 13. Data-asset dashboard (Missing, L)
 
-**Route.** `src/app/(app)/admin/page.tsx`. The middleware is defense in depth only; the
+**Route.** `apps/app/src/app/(app)/admin/page.tsx`. The middleware is defense in depth only; the
 real gate is `requireAdmin` on every `admin.*` Convex function.
 
 **Snapshot job.** A monthly cron (`crons.monthly`) runs `admin.computeMonth`, an internal
@@ -1166,7 +1166,7 @@ so each finishes in one or two batches.
    Or should outcomes start in-app only?
 5. **Admin identity.** Gate on your Clerk user id in the `ADMIN_CLERK_ID` env (recommended),
    or on a Clerk role?
-6. **Material truncation.** Keep the 80k-char clamp (`src/lib/materials.ts:8`), or retain
+6. **Material truncation.** Keep the 80k-char clamp (`apps/app/src/lib/materials.ts:8`), or retain
    the full text in storage for the asset while still clamping prompts?
 7. **Consent history after deletion.** Delete it with the account, or keep a hashed-id
    proof of consent? This is a counsel question too.
